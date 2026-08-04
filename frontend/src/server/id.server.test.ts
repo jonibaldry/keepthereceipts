@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { TypeID } from "typeid-js"
-import { generateUserId } from "./id.server"
+import { generateAttachmentId, generateDocumentId, generateUserId } from "./id.server"
 
 describe("id.server", () => {
   it("generates an id prefixed with user_", () => {
@@ -16,5 +16,17 @@ describe("id.server", () => {
   it("generates unique ids", () => {
     const ids = new Set(Array.from({ length: 20 }, () => generateUserId()))
     expect(ids.size).toBe(20)
+  })
+
+  it("generates a document id prefixed with doc_", () => {
+    const id = generateDocumentId()
+    expect(id).toMatch(/^doc_[0-9a-z]+$/)
+    expect(TypeID.fromString(id, "doc").toString()).toBe(id)
+  })
+
+  it("generates an attachment id prefixed with att_", () => {
+    const id = generateAttachmentId()
+    expect(id).toMatch(/^att_[0-9a-z]+$/)
+    expect(TypeID.fromString(id, "att").toString()).toBe(id)
   })
 })

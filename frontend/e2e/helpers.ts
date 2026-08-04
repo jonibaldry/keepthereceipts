@@ -28,3 +28,10 @@ export function uniqueCredentials(): TestCredentials {
     password: "correct-horse-battery",
   }
 }
+
+// Documents persist in the real vault.db across test runs (no per-test
+// reset), so a fixed title would eventually collide with leftovers from
+// earlier runs and break getByText/getByRole("link") lookups.
+export function uniqueTitle(label: string): string {
+  return `${label} ${randomUUID().slice(0, 8)}`
+}

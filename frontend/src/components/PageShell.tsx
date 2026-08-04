@@ -18,24 +18,35 @@ function AuthNav({ currentUser }: { currentUser: SessionUser | null }) {
 
   if (currentUser) {
     return (
-      <form
-        className="inline"
-        onSubmit={async (e) => {
-          e.preventDefault()
-          await logoutFn()
-          await router.invalidate()
-          router.navigate({ to: "/" })
-        }}
-      >
-        <button type="submit" className={`${navLinkClass} appearance-none bg-transparent border-0 p-0 cursor-pointer`}>
-          log out ({currentUser.username})
-        </button>
-      </form>
+      <div className="flex items-baseline gap-3">
+        <a href="/documents" className={navLinkClass}>
+          documents
+        </a>
+        <form
+          className="inline"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            await logoutFn()
+            await router.invalidate()
+            router.navigate({ to: "/" })
+          }}
+        >
+          <button
+            type="submit"
+            className={`${navLinkClass} appearance-none bg-transparent border-0 p-0 cursor-pointer`}
+          >
+            log out ({currentUser.username})
+          </button>
+        </form>
+      </div>
     )
   }
 
   return (
     <div className="flex items-baseline gap-3">
+      <a href="/documents" className={navLinkClass}>
+        documents
+      </a>
       <a href="/register" className={navLinkClass}>
         create account
       </a>

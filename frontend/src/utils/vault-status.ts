@@ -25,6 +25,18 @@ export const getVaultStatus = createServerFn({ method: "GET" }).handler(async ()
   }
 })
 
+// Cheap, no-fetch counterpart to getVaultStatus's IPFS root check — for
+// routes that just need to build a gateway link, not the vault root state.
+export const getGatewayUrl = createServerFn({ method: "GET" }).handler(async (): Promise<string> => {
+  return process.env.IPFS_GATEWAY_URL || "https://ipfs.keepthereceipts.net"
+})
+
+// The app's own public URL — unrelated to IPFS, used to build absolute
+// links back to itself (canonical link / og:url tags).
+export const getBaseUrl = createServerFn({ method: "GET" }).handler(async (): Promise<string> => {
+  return process.env.BASE_URL || "http://localhost:3000"
+})
+
 export function formatCheckedAt(iso: string): string {
   return iso.replace("T", " ").replace(/(\.\d+)?Z$/, " UTC")
 }

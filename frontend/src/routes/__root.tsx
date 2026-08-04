@@ -10,6 +10,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import appCss from '../styles.css?url'
 import { getCurrentUser } from '../server/auth.functions'
+import { getBaseUrl, getGatewayUrl } from '../utils/vault-status'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -18,7 +19,10 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  beforeLoad: async () => ({ currentUser: await getCurrentUser() }),
+  beforeLoad: async () => {
+    const [currentUser, gatewayUrl, baseUrl] = await Promise.all([getCurrentUser(), getGatewayUrl(), getBaseUrl()])
+    return { currentUser, gatewayUrl, baseUrl }
+  },
   head: () => ({
     meta: [
       {

@@ -27,6 +27,7 @@
     "better-sqlite3": "^13.0.2",
     "jose": "^6.2.8",
     "nitro": "3.0.260610-beta",
+    "playwright-core": "^1.62.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.1.18",
@@ -53,6 +54,8 @@
     ]
   },
   "allowScripts": {
-    "better-sqlite3@13.0.2": true
+    "better-sqlite3@13.0.2": true,
+    "fsevents@2.3.3": true,
+    "fsevents@2.3.2": true
   }
 }

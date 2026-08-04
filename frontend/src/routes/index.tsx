@@ -12,7 +12,7 @@ const LEDGER_ITEMS = [
 
 export const Route = createFileRoute("/")({
   loader: () => getVaultStatus(),
-  head: () => ({
+  head: ({ match }) => ({
     meta: [
       { title: "keepthereceipts.net" },
       {
@@ -20,7 +20,9 @@ export const Route = createFileRoute("/")({
         content:
           "A open source, shared, freely distributable document vault. Every file is stored with IPFS, so every document gets a cryptographic fingerprint. Copy or continuously replicate the vault to any machine — the fingerprint proves nothing changed.",
       },
+      { property: "og:url", content: `${match.context.baseUrl}${match.pathname}` },
     ],
+    links: [{ rel: "canonical", href: `${match.context.baseUrl}${match.pathname}` }],
   }),
   component: Home,
 })

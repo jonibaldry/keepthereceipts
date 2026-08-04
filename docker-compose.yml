@@ -51,6 +51,7 @@ services:
       IPFS_API: /dns4/ipfs-node/tcp/5001
       IPFS_API_URL: http://ipfs-node:5001
       IPFS_GATEWAY_URL: https://ipfs.keepthereceipts.net
+      BASE_URL: https://keepthereceipts.net
       DNSLINK_DOMAIN: keepthereceipts.net
       USERS_DB_PATH: /data/users/users.db
       PORT: "3000"
