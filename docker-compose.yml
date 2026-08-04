@@ -32,7 +32,7 @@ services:
     environment:
       DB_PATH: /data/db/vault.db
       IPFS_API: /dns4/ipfs-node/tcp/5001
-      MFS_DIR: /vault/snapshots
+      VAULT_FILE: /vault/vault.db
       SNAPSHOT_INTERVAL: "60"
     volumes:
       - ./data/db:/data/db:ro
