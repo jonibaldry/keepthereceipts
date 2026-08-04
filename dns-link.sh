@@ -1,0 +1,1 @@
+dns-link-desec.sh

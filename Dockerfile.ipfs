@@ -1,0 +1,10 @@
+FROM ipfs/kubo:latest
+
+# kubo's entrypoint runs any executable script dropped in /container-init.d
+# after `ipfs init` but before the daemon starts, so we use it to seed
+# an MFS (Mutable File System) root directory.
+COPY init-mfs.sh /container-init.d/001-init-mfs.sh
+RUN chmod +x /container-init.d/001-init-mfs.sh
+
+# Swarm (TCP + UDP), HTTP API, and HTTP Gateway
+EXPOSE 4001 4001/udp 5001 8080

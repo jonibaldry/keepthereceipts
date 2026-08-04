@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page: #15201a;
+  --color-paper: #eeebe0;
+  --color-paper-line: #cfcaba;
+  --color-ink: #1d1a15;
+  --color-ink-soft: #6b6252;
+  --color-stamp: #b23b2e;
+
+  --font-serif: "IBM Plex Serif", serif;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+@keyframes print-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Torn-paper edges — a one-off effect, simpler as plain CSS than as utilities. */
+.receipt::before,
+.receipt::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 14px;
+  background-image: linear-gradient(135deg, var(--color-paper) 50%, transparent 50%),
+    linear-gradient(45deg, var(--color-paper) 50%, transparent 50%);
+  background-size: 18px 18px;
+  background-repeat: repeat-x;
+}
+.receipt::before {
+  top: -13px;
+  background-position: bottom left, bottom right;
+}
+.receipt::after {
+  bottom: -13px;
+  transform: scaleY(-1);
+}

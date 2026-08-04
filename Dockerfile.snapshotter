@@ -1,0 +1,15 @@
+FROM ipfs/kubo:latest AS ipfs-cli
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sqlite3 curl jq ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/local/bin:$PATH"
+COPY --from=ipfs-cli /usr/local/bin/ipfs /usr/local/bin/ipfs
+COPY snapshot.sh /usr/local/bin/snapshot.sh
+COPY dns-link-desec.sh /usr/local/bin/dns-link-desec.sh
+COPY dns-link.sh /usr/local/bin/dns-link.sh
+RUN chmod +x /usr/local/bin/snapshot.sh /usr/local/bin/dns-link-desec.sh
+
+ENTRYPOINT ["/usr/local/bin/snapshot.sh"]

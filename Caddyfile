@@ -1,0 +1,15 @@
+www.keepthereceipts.net {
+	redir https://keepthereceipts.net{uri} permanent
+}
+
+keepthereceipts.net {
+	reverse_proxy frontend:3000
+}
+
+ipfs.keepthereceipts.net {
+	# Read-only HTTP gateway — serves /ipfs/<cid> and /ipns/<name>, which is
+	# what DNSLink resolution and "download the whole vault" both rely on.
+	# The write-capable admin API (port 5001) is intentionally never proxied
+	# here — it stays bound to localhost only, see docker-compose.yml.
+	reverse_proxy ipfs-node:8080
+}

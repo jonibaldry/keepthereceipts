@@ -1,0 +1,8 @@
+.DS_Store
+.env
+.claude/settings.local.json
+
+# Runtime state: IPFS repo, sqlite dbs, litestream replica, Caddy certs/state,
+# upload staging area — all generated locally, never something to commit.
+data/
+export/
