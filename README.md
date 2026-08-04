@@ -1,3 +1,5 @@
+<img src="frontend/public/logo.svg" alt="keepthereceipts.net" height="48" />
+
 # Overview
 
 This project is an open source distributed document repository which can be copied by anybody, anonymously and even on a laptop.

@@ -23,7 +23,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     const [currentUser, gatewayUrl, baseUrl] = await Promise.all([getCurrentUser(), getGatewayUrl(), getBaseUrl()])
     return { currentUser, gatewayUrl, baseUrl }
   },
-  head: () => ({
+  head: ({ match }) => ({
     meta: [
       {
         charSet: 'utf-8',
@@ -34,6 +34,26 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         title: 'keepthereceipts.net',
+      },
+      {
+        name: 'theme-color',
+        content: '#15201a',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+      {
+        property: 'og:site_name',
+        content: 'keepthereceipts.net',
+      },
+      {
+        property: 'og:image',
+        content: `${match.context.baseUrl}/og-image.png`,
+      },
+      {
+        name: 'twitter:card',
+        content: 'summary_large_image',
       },
     ],
     links: [
@@ -53,6 +73,24 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       {
         rel: 'stylesheet',
         href: appCss,
+      },
+      {
+        rel: 'icon',
+        href: '/favicon.svg',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'icon',
+        href: '/favicon.ico',
+        sizes: '32x32',
+      },
+      {
+        rel: 'apple-touch-icon',
+        href: '/apple-touch-icon.png',
+      },
+      {
+        rel: 'manifest',
+        href: '/site.webmanifest',
       },
     ],
   }),
