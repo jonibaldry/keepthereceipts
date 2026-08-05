@@ -87,7 +87,13 @@ export function PageShell({ currentUser, children }: PageShellProps) {
         className={`${fadeClass} font-mono text-[0.72rem] text-ink-soft text-center m-0`}
         style={{ animationDelay: "0.55s" }}
       >
-        self-hosted &middot; open source &middot; no account required
+        self-hosted &middot; open source &middot; no account required &middot;{" "}
+        <a
+          href="/privacy"
+          className="underline underline-offset-2 hover:text-stamp focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
+        >
+          privacy
+        </a>
       </p>
 
       <a
