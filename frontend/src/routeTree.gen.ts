@@ -15,6 +15,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as DocumentsIndexRouteImport } from './routes/documents.index'
 import { Route as DocumentsDocumentIdRouteImport } from './routes/documents.$documentId'
 import { Route as DocumentsNewRouteImport } from './routes/documents.new'
+import { Route as DocumentsSearchRouteImport } from './routes/documents.search'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const DocumentsNewRoute = DocumentsNewRouteImport.update({
   path: '/documents/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentsSearchRoute = DocumentsSearchRouteImport.update({
+  id: '/documents/search',
+  path: '/documents/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/documents/$documentId': typeof DocumentsDocumentIdRoute
   '/documents/new': typeof DocumentsNewRoute
+  '/documents/search': typeof DocumentsSearchRoute
   '/documents/': typeof DocumentsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/documents/$documentId': typeof DocumentsDocumentIdRoute
   '/documents/new': typeof DocumentsNewRoute
+  '/documents/search': typeof DocumentsSearchRoute
   '/documents': typeof DocumentsIndexRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/documents/$documentId': typeof DocumentsDocumentIdRoute
   '/documents/new': typeof DocumentsNewRoute
+  '/documents/search': typeof DocumentsSearchRoute
   '/documents/': typeof DocumentsIndexRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/documents/$documentId'
     | '/documents/new'
+    | '/documents/search'
     | '/documents/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/documents/$documentId'
     | '/documents/new'
+    | '/documents/search'
     | '/documents'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/documents/$documentId'
     | '/documents/new'
+    | '/documents/search'
     | '/documents/'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   DocumentsDocumentIdRoute: typeof DocumentsDocumentIdRoute
   DocumentsNewRoute: typeof DocumentsNewRoute
+  DocumentsSearchRoute: typeof DocumentsSearchRoute
   DocumentsIndexRoute: typeof DocumentsIndexRoute
 }
 
@@ -152,6 +165,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documents/search': {
+      id: '/documents/search'
+      path: '/documents/search'
+      fullPath: '/documents/search'
+      preLoaderRoute: typeof DocumentsSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   DocumentsDocumentIdRoute: DocumentsDocumentIdRoute,
   DocumentsNewRoute: DocumentsNewRoute,
+  DocumentsSearchRoute: DocumentsSearchRoute,
   DocumentsIndexRoute: DocumentsIndexRoute,
 }
 export const routeTree = rootRouteImport

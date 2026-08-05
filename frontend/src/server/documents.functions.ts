@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start"
 import { createDocument as createDocumentRecord, CreateDocumentError } from "./create-document.server"
-import { getDocument as getDocumentRecord, listDocuments as listDocumentRecords } from "./documents-db.server"
+import {
+  getDocument as getDocumentRecord,
+  listDocuments as listDocumentRecords,
+  searchDocumentsByTag as searchDocumentsByTagRecords,
+} from "./documents-db.server"
 import { readSessionUser } from "./session.server"
 import { assertSameOrigin } from "./same-origin.server"
 import type { DocumentRecord } from "./documents-db.server"
@@ -55,3 +59,11 @@ export const listDocuments = createServerFn({ method: "GET" }).handler(
 export const getDocument = createServerFn({ method: "GET" })
   .validator((data: { id: string }) => data)
   .handler(async ({ data }): Promise<DocumentRecord | null> => getDocumentRecord(data.id))
+
+export const searchDocumentsByTag = createServerFn({ method: "GET" })
+  .validator((data: { tag: string }) => data)
+  .handler(async ({ data }): Promise<DocumentRecord[]> => {
+    const tag = data.tag.trim()
+    if (!tag) return []
+    return searchDocumentsByTagRecords(tag)
+  })

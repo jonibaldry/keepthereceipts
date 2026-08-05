@@ -22,6 +22,9 @@ function AuthNav({ currentUser }: { currentUser: SessionUser | null }) {
         <a href="/documents" className={navLinkClass}>
           documents
         </a>
+        <a href="/documents/search" className={navLinkClass}>
+          search
+        </a>
         <form
           className="inline"
           onSubmit={async (e) => {
@@ -46,6 +49,9 @@ function AuthNav({ currentUser }: { currentUser: SessionUser | null }) {
     <div className="flex items-baseline gap-3">
       <a href="/documents" className={navLinkClass}>
         documents
+      </a>
+      <a href="/documents/search" className={navLinkClass}>
+        search
       </a>
       <a href="/register" className={navLinkClass}>
         create account

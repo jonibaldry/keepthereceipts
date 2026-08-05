@@ -7,6 +7,7 @@ import {
   insertDocument,
   insertDocumentTags,
   listDocuments,
+  searchDocumentsByTag,
   updateAttachment,
 } from "./documents-db.server"
 
@@ -121,6 +122,40 @@ describe("documents-db.server", () => {
       { kind: "screenshot", status: "pending", mimeType: "image/png", cid: null },
       { kind: "archive", status: "pending", mimeType: "multipart/related", cid: null },
     ])
+  })
+
+  it("finds documents by exact tag match, most-recent-first", () => {
+    seedDocument("doc_1")
+    seedDocument("doc_2")
+    seedDocument("doc_3")
+    insertDocumentTags("doc_1", ["utilities"], db)
+    insertDocumentTags("doc_2", ["groceries"], db)
+    insertDocumentTags("doc_3", ["utilities"], db)
+
+    const docs = searchDocumentsByTag("utilities", db)
+    expect(docs.map((d) => d.id)).toEqual(["doc_3", "doc_1"])
+  })
+
+  it("finds documents by partial tag match", () => {
+    seedDocument("doc_1")
+    insertDocumentTags("doc_1", ["utilities"], db)
+
+    expect(searchDocumentsByTag("util", db).map((d) => d.id)).toEqual(["doc_1"])
+  })
+
+  it("escapes LIKE wildcards in the search term", () => {
+    seedDocument("doc_1")
+    insertDocumentTags("doc_1", ["50%_off"], db)
+    seedDocument("doc_2")
+    insertDocumentTags("doc_2", ["50xoff"], db)
+
+    expect(searchDocumentsByTag("50%_off", db).map((d) => d.id)).toEqual(["doc_1"])
+  })
+
+  it("returns no results for an unmatched tag", () => {
+    seedDocument("doc_1")
+    insertDocumentTags("doc_1", ["utilities"], db)
+    expect(searchDocumentsByTag("groceries", db)).toEqual([])
   })
 
   it("updates an attachment's cid/status/size independently of other attachments", () => {

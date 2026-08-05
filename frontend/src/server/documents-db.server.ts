@@ -198,6 +198,22 @@ export function listDocuments(db?: Database.Database): DocumentRecord[] {
   return rows.map((row) => rowToDocument(row, tagsByDoc.get(row.id) ?? [], attachmentsByDoc.get(row.id) ?? []))
 }
 
+export function searchDocumentsByTag(tag: string, db?: Database.Database): DocumentRecord[] {
+  db ??= getVaultDb()
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT documents.* FROM documents
+       JOIN document_tags ON document_tags.document_id = documents.id
+       WHERE document_tags.tag LIKE ? ESCAPE '\\'
+       ORDER BY documents.created_at DESC`,
+    )
+    .all(`%${tag.replace(/[\\%_]/g, (c) => `\\${c}`)}%`) as DocumentRow[]
+  const ids = rows.map((r) => r.id)
+  const tagsByDoc = tagsByDocumentId(ids, db)
+  const attachmentsByDoc = attachmentsByDocumentId(ids, db)
+  return rows.map((row) => rowToDocument(row, tagsByDoc.get(row.id) ?? [], attachmentsByDoc.get(row.id) ?? []))
+}
+
 export function getDocument(id: string, db?: Database.Database): DocumentRecord | null {
   db ??= getVaultDb()
   const row = db.prepare("SELECT * FROM documents WHERE id = ?").get(id) as DocumentRow | undefined

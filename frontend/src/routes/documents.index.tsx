@@ -31,13 +31,20 @@ function DocumentsPage() {
         </p>
       </div>
 
-      <a
-        href="/documents/new"
-        className={`${fadeClass} block text-center font-mono text-[0.88rem] tracking-[0.05em] uppercase border-2 border-ink px-4 py-3 my-[18px] hover:bg-ink hover:text-paper transition-colors focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2`}
-        style={fadeIn(3)}
-      >
-        + Add a document
-      </a>
+      <div className={`${fadeClass} flex gap-3 my-[18px]`} style={fadeIn(3)}>
+        <a
+          href="/documents/new"
+          className="flex-1 block text-center font-mono text-[0.88rem] tracking-[0.05em] uppercase border-2 border-ink px-4 py-3 hover:bg-ink hover:text-paper transition-colors focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
+        >
+          + Add a document
+        </a>
+        <a
+          href="/documents/search"
+          className="flex-1 block text-center font-mono text-[0.88rem] tracking-[0.05em] uppercase border-2 border-ink px-4 py-3 hover:bg-ink hover:text-paper transition-colors focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
+        >
+          Search tags
+        </a>
+      </div>
 
       {documents.length === 0 ? (
         <p className={`${fadeClass} text-[0.94rem] text-ink-soft`} style={fadeIn(4)}>
