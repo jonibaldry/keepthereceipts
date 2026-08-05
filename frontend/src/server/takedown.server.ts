@@ -1,7 +1,8 @@
 import { addBytesToIpfs } from "./ipfs.server"
-import { generateAttachmentId, generateTakedownRequestId } from "./id.server"
+import { generateTakedownAttachmentId, generateTakedownRequestId } from "./id.server"
 import { safeFileName } from "./safe-filename.server"
-import { getDocument, insertAttachment, insertTakedownRequest } from "./documents-db.server"
+import { getDocument } from "./documents-db.server"
+import { insertTakedownAttachment, insertTakedownRequest } from "./users-db.server"
 
 export const MAX_TAKEDOWN_FILE_SIZE_BYTES = 100 * 1024 * 1024
 export const MAX_TAKEDOWN_FILES = 5
@@ -34,6 +35,9 @@ export async function createTakedownRequest(input: TakedownRequestInput): Promis
     }
   }
 
+  // getDocument reads from vault.db (public), just to confirm the document
+  // exists — the request itself is recorded in users.db (private), see
+  // below.
   const document = getDocument(input.documentId)
   if (!document) {
     throw new TakedownRequestError("document not found")
@@ -46,25 +50,19 @@ export async function createTakedownRequest(input: TakedownRequestInput): Promis
     const fileName = safeFileName(file.name || "file")
     const bytes = new Uint8Array(await file.arrayBuffer())
     try {
-      // Pinned like any other attachment, but deliberately never copied
-      // into MFS: the vault's MFS tree is what gets published as the
-      // site's root and snapshotted, so anything placed there is
-      // effectively public regardless of whether the UI links to it.
-      // Evidence attached to a takedown request stays out of that tree —
-      // reachable only via its exact CID, which is what "not visible
-      // publicly" means here. See attachmentsByDocumentId in
-      // documents-db.server.ts for the read-side half of this.
+      // Pinned on IPFS for storage, like any other attachment, but its cid
+      // is recorded only in users.db (private) — never in vault.db or MFS,
+      // both of which get published as the site's root (see the warning
+      // atop vault-db.server.ts). Reachable only by someone who already has
+      // the exact cid, which is what "not visible publicly" means here.
       const { cid, size } = await addBytesToIpfs(bytes, fileName)
-      insertAttachment({
-        id: generateAttachmentId(),
-        documentId: input.documentId,
-        kind: "takedown_evidence",
-        status: "complete",
+      insertTakedownAttachment({
+        id: generateTakedownAttachmentId(),
+        takedownRequestId: id,
         cid,
         fileName,
         mimeType: file.type || "application/octet-stream",
         fileSize: size,
-        takedownRequestId: id,
       })
     } catch (err) {
       // Best-effort, same as screenshot/archive capture: the request

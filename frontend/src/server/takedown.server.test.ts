@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { addBytesMock, getDocumentMock, insertTakedownRequestMock, insertAttachmentMock } = vi.hoisted(() => ({
-  addBytesMock: vi.fn(),
-  getDocumentMock: vi.fn(),
-  insertTakedownRequestMock: vi.fn(),
-  insertAttachmentMock: vi.fn(),
-}))
+const { addBytesMock, getDocumentMock, insertTakedownRequestMock, insertTakedownAttachmentMock } = vi.hoisted(
+  () => ({
+    addBytesMock: vi.fn(),
+    getDocumentMock: vi.fn(),
+    insertTakedownRequestMock: vi.fn(),
+    insertTakedownAttachmentMock: vi.fn(),
+  }),
+)
 
 vi.mock("./ipfs.server", () => ({
   addBytesToIpfs: addBytesMock,
@@ -13,8 +15,11 @@ vi.mock("./ipfs.server", () => ({
 
 vi.mock("./documents-db.server", () => ({
   getDocument: getDocumentMock,
+}))
+
+vi.mock("./users-db.server", () => ({
   insertTakedownRequest: insertTakedownRequestMock,
-  insertAttachment: insertAttachmentMock,
+  insertTakedownAttachment: insertTakedownAttachmentMock,
 }))
 
 import {
@@ -74,7 +79,7 @@ describe("createTakedownRequest", () => {
     ).rejects.toThrow("100MB")
   })
 
-  it("records the request and stores evidence attachments scoped to it, without publishing to MFS", async () => {
+  it("records the request and its evidence attachment in the private db, keyed to the request", async () => {
     const result = await createTakedownRequest({
       documentId: "doc_1",
       message: "this is my personal information",
@@ -84,10 +89,8 @@ describe("createTakedownRequest", () => {
     expect(insertTakedownRequestMock).toHaveBeenCalledWith(
       expect.objectContaining({ documentId: "doc_1", message: "this is my personal information" }),
     )
-    expect(insertAttachmentMock).toHaveBeenCalledWith(
+    expect(insertTakedownAttachmentMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        documentId: "doc_1",
-        kind: "takedown_evidence",
         cid: "bafyevidence",
         fileName: "evidence.png",
         takedownRequestId: result.id,
@@ -117,13 +120,13 @@ describe("createTakedownRequest", () => {
 
     expect(result.id).toBeTruthy()
     expect(insertTakedownRequestMock).toHaveBeenCalled()
-    expect(insertAttachmentMock).not.toHaveBeenCalled()
+    expect(insertTakedownAttachmentMock).not.toHaveBeenCalled()
     errorSpy.mockRestore()
   })
 
   it("allows a request with no evidence files at all", async () => {
     const result = await createTakedownRequest({ documentId: "doc_1", message: "please remove this", files: [] })
     expect(result.id).toBeTruthy()
-    expect(insertAttachmentMock).not.toHaveBeenCalled()
+    expect(insertTakedownAttachmentMock).not.toHaveBeenCalled()
   })
 })

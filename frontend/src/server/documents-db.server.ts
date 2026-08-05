@@ -2,7 +2,7 @@ import type Database from "better-sqlite3"
 import { getVaultDb } from "./vault-db.server"
 
 export type CaptureStatus = "pending" | "complete" | "failed"
-export type AttachmentKind = "file" | "screenshot" | "archive" | "metadata" | "takedown_evidence"
+export type AttachmentKind = "file" | "screenshot" | "archive" | "metadata"
 export type DocumentStatus = "pending" | "active"
 
 export interface NewDocumentInput {
@@ -23,15 +23,6 @@ export interface NewAttachmentInput {
   fileName: string
   mimeType: string
   fileSize: number | null
-  // Set only for kind: "takedown_evidence" — see the attachments table
-  // comment in vault-db.server.ts.
-  takedownRequestId?: string | null
-}
-
-export interface NewTakedownRequestInput {
-  id: string
-  documentId: string
-  message: string
 }
 
 export interface AttachmentRecord {
@@ -149,8 +140,8 @@ export function insertDocumentTags(documentId: string, tags: string[], db?: Data
 export function insertAttachment(input: NewAttachmentInput, db?: Database.Database): void {
   db ??= getVaultDb()
   db.prepare(
-    `INSERT INTO attachments (id, document_id, kind, status, cid, file_name, mime_type, file_size, takedown_request_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO attachments (id, document_id, kind, status, cid, file_name, mime_type, file_size)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     input.id,
     input.documentId,
@@ -160,16 +151,6 @@ export function insertAttachment(input: NewAttachmentInput, db?: Database.Databa
     input.fileName,
     input.mimeType,
     input.fileSize,
-    input.takedownRequestId ?? null,
-  )
-}
-
-export function insertTakedownRequest(input: NewTakedownRequestInput, db?: Database.Database): void {
-  db ??= getVaultDb()
-  db.prepare("INSERT INTO takedown_requests (id, document_id, message) VALUES (?, ?, ?)").run(
-    input.id,
-    input.documentId,
-    input.message,
   )
 }
 
@@ -219,13 +200,8 @@ function attachmentsByDocumentId(documentIds: string[], db: Database.Database): 
   const attachmentsByDoc = new Map<string, AttachmentRecord[]>()
   if (documentIds.length === 0) return attachmentsByDoc
   const placeholders = documentIds.map(() => "?").join(", ")
-  // takedown_request_id IS NULL excludes takedown evidence — it's attached
-  // to the document for storage/cascade-delete purposes but must never
-  // surface through the public read path (list/search/get a document).
   const rows = db
-    .prepare(
-      `SELECT * FROM attachments WHERE document_id IN (${placeholders}) AND takedown_request_id IS NULL ORDER BY created_at`,
-    )
+    .prepare(`SELECT * FROM attachments WHERE document_id IN (${placeholders}) ORDER BY created_at`)
     .all(...documentIds) as AttachmentRow[]
   for (const row of rows) {
     const attachment = rowToAttachment(row)

@@ -57,7 +57,7 @@ services:
     volumes:
       - ./data/db:/data/db               # read-write: frontend owns writes to vault.db
       - ./data/export:/export            # shared staging area with ipfs-node for uploads
-      - ./data/users:/data/users         # user accounts — never replicated into the vault
+      - ./data/users:/data/users         # private db: user accounts + takedown requests — never replicated into the vault
     depends_on:
       - ipfs-node
     restart: unless-stopped
