@@ -1,0 +1,78 @@
+services:
+  ipfs-node:
+    image: jonibaldry/keepthereceipts-ipfs-node:${IMAGE_TAG:-latest}
+    container_name: ipfs-node
+    ports:
+      - "4001:4001"             # swarm (TCP)
+      - "4001:4001/udp"         # swarm (UDP / QUIC)
+      - "127.0.0.1:5001:5001"   # HTTP API (localhost only, never public)
+      - "127.0.0.1:8080:8080"   # HTTP gateway (public access goes via caddy)
+    volumes:
+      - ./data/ipfs:/data/ipfs  # node repo, including MFS state
+      - ./data/export:/export   # convenient host<->node file staging area
+    restart: unless-stopped
+
+  litestream:
+    image: litestream/litestream:latest
+    command: replicate
+    volumes:
+      - ./data/db:/data/db
+      - ./data/replica:/data/replica
+      - ./litestream.yml:/etc/litestream.yml:ro
+    restart: unless-stopped
+
+  snapshotter:
+    image: jonibaldry/keepthereceipts-snapshotter:${IMAGE_TAG:-latest}
+    env_file:
+      - .env
+    environment:
+      DB_PATH: /data/db/vault.db
+      IPFS_API: /dns4/ipfs-node/tcp/5001
+      VAULT_FILE: /vault/vault.db
+      SNAPSHOT_INTERVAL: "60"
+    volumes:
+      - ./data/db:/data/db:ro
+      - ./data/snapshotter:/var/lib/snapshotter
+    depends_on:
+      - ipfs-node
+    restart: unless-stopped
+
+  frontend:
+    profiles: ["full"]
+    image: jonibaldry/keepthereceipts-frontend:${IMAGE_TAG:-latest}
+    environment:
+      DB_PATH: /data/db/vault.db
+      IPFS_API: /dns4/ipfs-node/tcp/5001
+      IPFS_API_URL: http://ipfs-node:5001
+      IPFS_GATEWAY_URL: https://ipfs.keepthereceipts.net
+      BASE_URL: https://keepthereceipts.net
+      DNSLINK_DOMAIN: keepthereceipts.net
+      USERS_DB_PATH: /data/users/users.db
+      PORT: "3000"
+      # Session tokens are only unforgeable as long as this stays secret —
+      # read from .env (gitignored) via Compose's automatic interpolation,
+      # not env_file, so the frontend container doesn't also inherit the
+      # unrelated deSEC credentials .env holds for dns-link-desec.sh.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+    volumes:
+      - ./data/db:/data/db               # read-write: frontend owns writes to vault.db
+      - ./data/export:/export            # shared staging area with ipfs-node for uploads
+      - ./data/users:/data/users         # user accounts — never replicated into the vault
+    depends_on:
+      - ipfs-node
+    restart: unless-stopped
+
+  caddy:
+    profiles: ["full"]
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy/data:/data
+      - ./data/caddy/config:/config
+    depends_on:
+      - ipfs-node
+      - frontend
+    restart: unless-stopped
