@@ -3,6 +3,15 @@ www.keepthereceipts.net {
 }
 
 keepthereceipts.net {
+	# The app's own 100MB check (create-document.server.ts) only runs after
+	# the whole upload is already parsed into memory — it rejects oversized
+	# files too late to stop the memory spike. Caddy enforces the real cap
+	# by rejecting (413) while still streaming the body in, before it ever
+	# reaches the app. A little headroom over the app's limit for multipart
+	# boundaries/other form fields.
+	request_body {
+		max_size 110MB
+	}
 	reverse_proxy frontend:3000
 }
 
