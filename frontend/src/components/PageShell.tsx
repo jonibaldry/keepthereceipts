@@ -75,7 +75,7 @@ export function PageShell({ currentUser, children }: PageShellProps) {
           aria-label="keepthereceipts.net — home"
           className="shrink-0 hover:opacity-80 transition-opacity focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
         >
-          <img src="/logo.svg" alt="keepthereceipts.net" className="block h-4 w-auto" />
+          <img src="/logo.svg" alt="keepthereceipts.net" className="block h-7 w-auto" />
         </a>
         <AuthNav currentUser={currentUser} />
       </div>
