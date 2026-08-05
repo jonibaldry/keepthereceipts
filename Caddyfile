@@ -12,6 +12,25 @@ keepthereceipts.net {
 	request_body {
 		max_size 110MB
 	}
+
+	# script-src/style-src need 'unsafe-inline': TanStack Start's SSR
+	# streaming hydration emits inline <script> tags we don't control the
+	# content of, and every fade-in animation is an inline style="" attribute
+	# (see fadeIn() in utils/animation.ts). Neither is attacker-reachable —
+	# there's no dangerouslySetInnerHTML anywhere in this app, so user input
+	# never becomes markup — CSP here is defense-in-depth on top of that, not
+	# the only thing standing between user input and script execution.
+	# img-src allows the IPFS gateway origin for the screenshot preview on
+	# the document detail page (documents.$documentId.tsx).
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://ipfs.keepthereceipts.net; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	}
+
 	reverse_proxy frontend:3000
 }
 
@@ -20,5 +39,19 @@ ipfs.keepthereceipts.net {
 	# what DNSLink resolution and "download the whole vault" both rely on.
 	# The write-capable admin API (port 5001) is intentionally never proxied
 	# here — it stays bound to localhost only, see docker-compose.yml.
+	#
+	# This gateway serves whatever anyone uploads, verbatim — including
+	# arbitrary HTML/SVG a user attaches to a document. `nosniff` stops the
+	# browser from MIME-sniffing a plain-text upload into an executable
+	# context, and `Content-Security-Policy: sandbox` treats every response
+	# as if it were a sandboxed <iframe> with no origin of its own: no
+	# script execution, no form submission, no top-level navigation. This is
+	# the same approach public IPFS gateways (e.g. ipfs.io) use for exactly
+	# this reason. Downloading/viewing files is unaffected — only active
+	# content in what's served here is neutralized.
+	header {
+		X-Content-Type-Options "nosniff"
+		Content-Security-Policy "sandbox"
+	}
 	reverse_proxy ipfs-node:8080
 }
