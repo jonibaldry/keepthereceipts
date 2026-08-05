@@ -67,10 +67,16 @@ export function PageShell({ currentUser, children }: PageShellProps) {
   return (
     <main className="receipt relative w-full max-w-[620px] bg-paper px-5 sm:px-[clamp(20px,5vw,48px)] pt-10 pb-8 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.55)]">
       <div
-        className={`${fadeClass} flex justify-between items-baseline gap-3 font-mono text-[0.72rem] tracking-[0.06em] text-ink-soft uppercase`}
+        className={`${fadeClass} flex justify-between items-center gap-3 font-mono text-[0.72rem] tracking-[0.06em] text-ink-soft uppercase`}
         style={fadeIn(0)}
       >
-        <span>keepthereceipts.net</span>
+        <a
+          href="/"
+          aria-label="keepthereceipts.net — home"
+          className="shrink-0 hover:opacity-80 transition-opacity focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
+        >
+          <img src="/logo.svg" alt="keepthereceipts.net" className="block h-4 w-auto" />
+        </a>
         <AuthNav currentUser={currentUser} />
       </div>
 
