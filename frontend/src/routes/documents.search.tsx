@@ -92,7 +92,10 @@ function SearchPage() {
                     {doc.tags.map((t) => `#${t}`).join(" ")}
                   </p>
                 )}
-                <p className="font-mono text-[0.72rem] text-ink-soft mt-1 mb-0">{formatCheckedAt(doc.createdAt)}</p>
+                <p className="font-mono text-[0.72rem] text-ink-soft mt-1 mb-0">
+                  {formatCheckedAt(doc.createdAt)}
+                  {doc.status === "pending" && " · pending…"}
+                </p>
               </li>
             ))}
           </ul>

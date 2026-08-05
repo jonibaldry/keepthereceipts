@@ -5,7 +5,12 @@ import { registerUser, RegistrationError } from "./register-user.server"
 import { createSessionToken, setSessionCookie, clearSessionCookie, readSessionUser } from "./session.server"
 import { assertSameOrigin } from "./same-origin.server"
 import { checkRateLimit, RateLimitError } from "./rate-limit.server"
+import { isUserAdmin } from "./users-db.server"
 import type { SessionUser } from "./session.server"
+
+export interface CurrentUser extends SessionUser {
+  isAdmin: boolean
+}
 
 // Caddy is the only thing that ever talks to this app directly (see
 // docker-compose.yml/Caddyfile), and it sets X-Forwarded-For on every
@@ -39,7 +44,15 @@ export type RegisterResult =
   | { ok: false; code: "invalid" | "conflict" | "unknown"; message: string }
 
 export const getCurrentUser = createServerFn({ method: "GET" }).handler(
-  async (): Promise<SessionUser | null> => readSessionUser(),
+  async (): Promise<CurrentUser | null> => {
+    const user = await readSessionUser()
+    if (!user) return null
+    // Checked fresh against the db rather than embedded in the session
+    // token, so admin access (granted or revoked directly in the db —
+    // there's no admin UI yet) takes effect on the next request instead of
+    // waiting for the user's existing 7-day token to expire.
+    return { ...user, isAdmin: isUserAdmin(user.id) }
+  },
 )
 
 export const login = createServerFn({ method: "POST" })

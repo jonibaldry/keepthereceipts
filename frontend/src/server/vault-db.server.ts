@@ -9,7 +9,9 @@ const VAULT_SCHEMA = `
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     source_url TEXT,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    status TEXT NOT NULL DEFAULT 'active',
+    deleted_at TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents(user_id);
@@ -48,6 +50,31 @@ const VAULT_SCHEMA = `
 // and 'archive' start 'pending' and are filled in independently, since one
 // can succeed while the other fails.
 
+// documents.status: 'pending' (still waiting on background screenshot/
+// archive capture) | 'active' (either there was nothing to wait on, or
+// capture has settled — successfully or not, see documents-db.server.ts).
+// documents.deleted_at: null unless an admin has deleted the document, in
+// which case it's a timestamp and the row is treated as gone everywhere
+// except direct DB inspection — see markDocumentDeleted.
+
+// Column additions after the initial release: existing on-disk databases
+// were created before `status`/`deleted_at` existed, and CREATE TABLE IF NOT
+// EXISTS is a no-op against them, so a fresh install and an upgrade must
+// both end up with the same columns. New rows default to 'active' at the
+// table level only as a safety net — insertDocument always passes an
+// explicit status, so this default is only ever observed by a migrated
+// pre-existing row.
+function migrateVaultDb(db: Database.Database): void {
+  const columns = db.prepare("PRAGMA table_info(documents)").all() as { name: string }[]
+  const columnNames = new Set(columns.map((c) => c.name))
+  if (!columnNames.has("status")) {
+    db.exec("ALTER TABLE documents ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
+  }
+  if (!columnNames.has("deleted_at")) {
+    db.exec("ALTER TABLE documents ADD COLUMN deleted_at TEXT")
+  }
+}
+
 // Exported for tests, which want an isolated (usually :memory:) db rather
 // than the process-wide singleton below.
 export function createVaultDb(path: string): Database.Database {
@@ -60,6 +87,7 @@ export function createVaultDb(path: string): Database.Database {
   }
   db.pragma("foreign_keys = ON")
   db.exec(VAULT_SCHEMA)
+  migrateVaultDb(db)
   return db
 }
 

@@ -3,6 +3,7 @@ import { getVaultDb } from "./vault-db.server"
 
 export type CaptureStatus = "pending" | "complete" | "failed"
 export type AttachmentKind = "file" | "screenshot" | "archive" | "metadata"
+export type DocumentStatus = "pending" | "active"
 
 export interface NewDocumentInput {
   id: string
@@ -10,6 +11,7 @@ export interface NewDocumentInput {
   title: string
   description: string
   sourceUrl: string | null
+  status: DocumentStatus
 }
 
 export interface NewAttachmentInput {
@@ -42,6 +44,8 @@ export interface DocumentRecord {
   description: string
   sourceUrl: string | null
   createdAt: string
+  status: DocumentStatus
+  deletedAt: string | null
   tags: string[]
   attachments: AttachmentRecord[]
 }
@@ -53,6 +57,8 @@ interface DocumentRow {
   description: string
   source_url: string | null
   created_at: string
+  status: DocumentStatus
+  deleted_at: string | null
 }
 
 interface AttachmentRow {
@@ -89,6 +95,8 @@ function rowToDocument(row: DocumentRow, tags: string[], attachments: Attachment
     description: row.description,
     sourceUrl: row.source_url,
     createdAt: row.created_at,
+    status: row.status,
+    deletedAt: row.deleted_at,
     tags,
     attachments,
   }
@@ -97,8 +105,26 @@ function rowToDocument(row: DocumentRow, tags: string[], attachments: Attachment
 export function insertDocument(input: NewDocumentInput, db?: Database.Database): void {
   db ??= getVaultDb()
   db.prepare(
-    `INSERT INTO documents (id, user_id, title, description, source_url) VALUES (?, ?, ?, ?, ?)`,
-  ).run(input.id, input.userId, input.title, input.description, input.sourceUrl)
+    `INSERT INTO documents (id, user_id, title, description, source_url, status) VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(input.id, input.userId, input.title, input.description, input.sourceUrl, input.status)
+}
+
+// Called once background capture (or, when there's none, document creation
+// itself) has settled — success or failure, since each attachment already
+// carries its own status for that. Idempotent no-op if already active.
+export function markDocumentActive(id: string, db?: Database.Database): void {
+  db ??= getVaultDb()
+  db.prepare("UPDATE documents SET status = 'active' WHERE id = ?").run(id)
+}
+
+// Soft delete: the row (and its DB-recorded association with any IPFS
+// content) stays for audit purposes, but every read query below excludes it.
+// Idempotent — deleting an already-deleted document is a no-op.
+export function markDocumentDeleted(id: string, db?: Database.Database): void {
+  db ??= getVaultDb()
+  db.prepare(
+    "UPDATE documents SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND deleted_at IS NULL",
+  ).run(id)
 }
 
 export function insertDocumentTags(documentId: string, tags: string[], db?: Database.Database): void {
@@ -191,7 +217,9 @@ function attachmentsByDocumentId(documentIds: string[], db: Database.Database): 
 
 export function listDocuments(db?: Database.Database): DocumentRecord[] {
   db ??= getVaultDb()
-  const rows = db.prepare("SELECT * FROM documents ORDER BY created_at DESC").all() as DocumentRow[]
+  const rows = db
+    .prepare("SELECT * FROM documents WHERE deleted_at IS NULL ORDER BY created_at DESC")
+    .all() as DocumentRow[]
   const ids = rows.map((r) => r.id)
   const tagsByDoc = tagsByDocumentId(ids, db)
   const attachmentsByDoc = attachmentsByDocumentId(ids, db)
@@ -204,7 +232,7 @@ export function searchDocumentsByTag(tag: string, db?: Database.Database): Docum
     .prepare(
       `SELECT DISTINCT documents.* FROM documents
        JOIN document_tags ON document_tags.document_id = documents.id
-       WHERE document_tags.tag LIKE ? ESCAPE '\\'
+       WHERE documents.deleted_at IS NULL AND document_tags.tag LIKE ? ESCAPE '\\'
        ORDER BY documents.created_at DESC`,
     )
     .all(`%${tag.replace(/[\\%_]/g, (c) => `\\${c}`)}%`) as DocumentRow[]
@@ -216,7 +244,9 @@ export function searchDocumentsByTag(tag: string, db?: Database.Database): Docum
 
 export function getDocument(id: string, db?: Database.Database): DocumentRecord | null {
   db ??= getVaultDb()
-  const row = db.prepare("SELECT * FROM documents WHERE id = ?").get(id) as DocumentRow | undefined
+  const row = db.prepare("SELECT * FROM documents WHERE id = ? AND deleted_at IS NULL").get(id) as
+    | DocumentRow
+    | undefined
   if (!row) return null
   const tagsByDoc = tagsByDocumentId([id], db)
   const attachmentsByDoc = attachmentsByDocumentId([id], db)

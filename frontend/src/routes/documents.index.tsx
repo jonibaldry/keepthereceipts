@@ -67,6 +67,7 @@ function DocumentsPage() {
               )}
               <p className="font-mono text-[0.72rem] text-ink-soft mt-1 mb-0">
                 {formatCheckedAt(doc.createdAt)}
+                {doc.status === "pending" && " · pending…"}
                 {doc.attachments.length > 0 &&
                   ` · ${doc.attachments.map((a) => a.kind).join(", ")}`}
               </p>

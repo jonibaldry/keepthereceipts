@@ -55,3 +55,19 @@ export async function mfsMkdirP(path: string): Promise<void> {
 export async function mfsCp(cid: string, destPath: string): Promise<void> {
   await ipfsApiPost("/api/v0/files/cp", { arg: [`/ipfs/${cid}`, destPath] })
 }
+
+// force implies recursive for directories and, per the Kubo docs, avoids an
+// error if the target is already gone — safe to call even if a previous
+// delete attempt partially succeeded.
+export async function mfsRm(path: string): Promise<void> {
+  await ipfsApiPost("/api/v0/files/rm", { arg: path, recursive: "true", force: "true" })
+}
+
+// Removing the pin lets the node's garbage collector reclaim the blocks.
+// Note this is content-addressed storage: if the exact same bytes were ever
+// added as part of another document, that document shares this CID and
+// unpinning it here does not remove the underlying blocks (kubo pins are
+// per-CID, not per-reference), so nothing else's content is destroyed.
+export async function pinRm(cid: string): Promise<void> {
+  await ipfsApiPost("/api/v0/pin/rm", { arg: cid })
+}

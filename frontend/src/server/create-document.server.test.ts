@@ -9,6 +9,7 @@ const {
   insertTagsMock,
   insertAttachmentMock,
   getDocumentMock,
+  markDocumentActiveMock,
   assertPublicHostnameMock,
 } = vi.hoisted(() => ({
   addBytesMock: vi.fn(),
@@ -19,6 +20,7 @@ const {
   insertTagsMock: vi.fn(),
   insertAttachmentMock: vi.fn(),
   getDocumentMock: vi.fn(),
+  markDocumentActiveMock: vi.fn(),
   assertPublicHostnameMock: vi.fn(),
 }))
 
@@ -37,6 +39,7 @@ vi.mock("./documents-db.server", () => ({
   insertDocumentTags: insertTagsMock,
   insertAttachment: insertAttachmentMock,
   getDocument: getDocumentMock,
+  markDocumentActive: markDocumentActiveMock,
 }))
 
 // The real assertPublicHostname does a DNS lookup, which unit tests here
@@ -171,6 +174,10 @@ describe("createDocument", () => {
     })
     expect(insertTagsMock).toHaveBeenCalledWith(expect.any(String), ["directdebit", "utilities"])
     expect(captureAndStoreMock).not.toHaveBeenCalled()
+    expect(insertDocumentMock).toHaveBeenCalledWith(expect.objectContaining({ status: "pending" }))
+    // No source URL means no background capture to wait on, so the document
+    // is marked active before createDocument returns.
+    expect(markDocumentActiveMock).toHaveBeenCalledWith(expect.stringMatching(/^doc_/))
   })
 
   it("sanitizes a path-traversal filename down to its basename before storing", async () => {
@@ -308,13 +315,16 @@ describe("createDocument", () => {
     })
 
     // Capture hasn't settled yet, so the metadata file must not have been
-    // written — it would otherwise miss the screenshot/archive cids.
+    // written — it would otherwise miss the screenshot/archive cids — and
+    // the document must still be pending, not active.
     expect(insertAttachmentMock).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "metadata" }))
+    expect(markDocumentActiveMock).not.toHaveBeenCalled()
 
     resolveCapture()
     await vi.waitFor(() => {
       expect(insertAttachmentMock).toHaveBeenCalledWith(expect.objectContaining({ kind: "metadata" }))
     })
+    expect(markDocumentActiveMock).toHaveBeenCalled()
 
     const metadataCall = addBytesMock.mock.calls.find(([, name]) => name.endsWith(".metadata"))
     const json = JSON.parse(new TextDecoder().decode(metadataCall![0] as Uint8Array))

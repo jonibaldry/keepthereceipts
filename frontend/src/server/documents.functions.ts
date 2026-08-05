@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { createDocument as createDocumentRecord, CreateDocumentError } from "./create-document.server"
+import { deleteDocument as deleteDocumentRecord, DeleteDocumentError } from "./delete-document.server"
 import {
   getDocument as getDocumentRecord,
   listDocuments as listDocumentRecords,
@@ -7,9 +8,12 @@ import {
 } from "./documents-db.server"
 import { readSessionUser } from "./session.server"
 import { assertSameOrigin } from "./same-origin.server"
+import { isUserAdmin } from "./users-db.server"
 import type { DocumentRecord } from "./documents-db.server"
 
 export type CreateDocumentResult = { ok: true; document: DocumentRecord } | { ok: false; message: string }
+
+export type DeleteDocumentResult = { ok: true } | { ok: false; message: string }
 
 interface CreateDocumentFormInput {
   title: string
@@ -66,4 +70,26 @@ export const searchDocumentsByTag = createServerFn({ method: "GET" })
     const tag = data.tag.trim()
     if (!tag) return []
     return searchDocumentsByTagRecords(tag)
+  })
+
+export const deleteDocument = createServerFn({ method: "POST" })
+  .validator((data: { id: string }) => data)
+  .handler(async ({ data }): Promise<DeleteDocumentResult> => {
+    assertSameOrigin()
+    const user = await readSessionUser()
+    if (!user) {
+      return { ok: false, message: "you must be logged in to do that" }
+    }
+    if (!isUserAdmin(user.id)) {
+      return { ok: false, message: "admin access is required to delete a document" }
+    }
+    try {
+      await deleteDocumentRecord(data.id)
+      return { ok: true }
+    } catch (err) {
+      if (err instanceof DeleteDocumentError) {
+        return { ok: false, message: err.message }
+      }
+      throw err
+    }
   })

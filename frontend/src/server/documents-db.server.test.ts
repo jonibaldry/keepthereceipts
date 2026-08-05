@@ -7,6 +7,8 @@ import {
   insertDocument,
   insertDocumentTags,
   listDocuments,
+  markDocumentActive,
+  markDocumentDeleted,
   searchDocumentsByTag,
   updateAttachment,
 } from "./documents-db.server"
@@ -26,6 +28,7 @@ describe("documents-db.server", () => {
         title: `Document ${id}`,
         description: "a description",
         sourceUrl: null,
+        status: "active",
         ...overrides,
       },
       db,
@@ -177,5 +180,30 @@ describe("documents-db.server", () => {
     const arch = doc?.attachments.find((a) => a.id === "att_arch")
     expect(shot).toMatchObject({ cid: "bafyshot", status: "complete", fileSize: 42 })
     expect(arch).toMatchObject({ cid: null, status: "failed" })
+  })
+
+  it("inserts a document as pending and moves it to active", () => {
+    seedDocument("doc_1", { status: "pending" })
+    expect(getDocument("doc_1", db)?.status).toBe("pending")
+
+    markDocumentActive("doc_1", db)
+    expect(getDocument("doc_1", db)?.status).toBe("active")
+  })
+
+  it("soft-deletes a document, hiding it from getDocument/listDocuments/searchDocumentsByTag", () => {
+    seedDocument("doc_1")
+    insertDocumentTags("doc_1", ["utilities"], db)
+
+    markDocumentDeleted("doc_1", db)
+
+    expect(getDocument("doc_1", db)).toBeNull()
+    expect(listDocuments(db)).toEqual([])
+    expect(searchDocumentsByTag("utilities", db)).toEqual([])
+  })
+
+  it("is a no-op to delete an already-deleted document", () => {
+    seedDocument("doc_1")
+    markDocumentDeleted("doc_1", db)
+    expect(() => markDocumentDeleted("doc_1", db)).not.toThrow()
   })
 })

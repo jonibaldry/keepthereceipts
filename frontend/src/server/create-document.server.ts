@@ -3,7 +3,13 @@ import { generateAttachmentId, generateDocumentId } from "./id.server"
 import { extractHashtags } from "../utils/hashtags"
 import { captureAndStore } from "./capture.server"
 import { assertPublicHostname, UnsafeUrlError } from "./network-guard.server"
-import { getDocument, insertAttachment, insertDocument, insertDocumentTags } from "./documents-db.server"
+import {
+  getDocument,
+  insertAttachment,
+  insertDocument,
+  insertDocumentTags,
+  markDocumentActive,
+} from "./documents-db.server"
 import type { DocumentRecord, NewAttachmentInput } from "./documents-db.server"
 
 export const MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
@@ -150,6 +156,9 @@ async function captureAndWriteMetadata(
   await captureAndStore(documentId, sourceUrl, screenshotAttachmentId, archiveAttachmentId).catch((err) =>
     console.error(`capture failed for document ${documentId}:`, err),
   )
+  // "active" means the background work has settled, not that it succeeded —
+  // each attachment's own status carries success/failure.
+  markDocumentActive(documentId)
   const document = getDocument(documentId)
   if (!document) return
   const metadataAttachment = await writeMetadataFile(documentId, document)
@@ -176,7 +185,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
 
   const fileAttachment = file ? await uploadFileAttachment(id, file) : null
 
-  insertDocument({ id, userId: input.userId, title, description, sourceUrl })
+  insertDocument({ id, userId: input.userId, title, description, sourceUrl, status: "pending" })
   insertDocumentTags(id, extractHashtags(description))
   if (fileAttachment) {
     insertAttachment(fileAttachment)
@@ -210,20 +219,26 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
     })
   }
 
+  if (sourceUrl && screenshotAttachmentId && archiveAttachmentId) {
+    // Fire-and-forget: the document is already created and returned to the
+    // caller. Capture fills in the screenshot/archive attachments in the
+    // background, and the metadata file is written only once that's done
+    // (see captureAndWriteMetadata) so it can link to their final cids —
+    // markDocumentActive happens there too, once that background work
+    // settles.
+    void captureAndWriteMetadata(id, sourceUrl, screenshotAttachmentId, archiveAttachmentId)
+  } else {
+    // No background capture to wait for — every attachment is already in
+    // its final state, so the document is active immediately.
+    markDocumentActive(id)
+  }
+
   const document = getDocument(id)
   if (!document) {
     throw new Error(`document ${id} not found immediately after insert`)
   }
 
-  if (sourceUrl && screenshotAttachmentId && archiveAttachmentId) {
-    // Fire-and-forget: the document is already created and returned to the
-    // caller. Capture fills in the screenshot/archive attachments in the
-    // background, and the metadata file is written only once that's done
-    // (see captureAndWriteMetadata) so it can link to their final cids.
-    void captureAndWriteMetadata(id, sourceUrl, screenshotAttachmentId, archiveAttachmentId)
-  } else {
-    // No background capture to wait for — every attachment is already in
-    // its final state, so write the metadata file synchronously.
+  if (!sourceUrl) {
     const metadataAttachment = await writeMetadataFile(id, document)
     if (metadataAttachment) {
       insertAttachment(metadataAttachment)
