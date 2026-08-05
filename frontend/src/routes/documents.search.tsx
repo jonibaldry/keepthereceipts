@@ -49,18 +49,20 @@ function SearchPage() {
 
       <form
         onSubmit={handleSubmit}
-        className={`${fadeClass} flex gap-2 mt-5`}
+        className={`${fadeClass} flex items-end gap-2 mt-5`}
         style={fadeIn(3)}
       >
-        <input
-          type="search"
-          name="tag"
-          defaultValue={tag}
-          key={tag}
-          placeholder="e.g. utilities"
-          autoFocus
-          className="flex-1 border border-paper-line bg-paper px-3 py-2 text-[0.94rem] text-ink focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-1"
-        />
+        <label className="flex-1 flex flex-col gap-1.5">
+          <span className="font-mono text-[0.72rem] tracking-[0.08em] uppercase text-ink-soft">tag</span>
+          <input
+            type="search"
+            name="tag"
+            defaultValue={tag}
+            key={tag}
+            placeholder="e.g. utilities"
+            className="border border-paper-line bg-paper px-3 py-2 text-[0.94rem] text-ink focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-1"
+          />
+        </label>
         <button
           type="submit"
           className="font-mono text-[0.82rem] tracking-[0.05em] uppercase border-2 border-ink px-4 py-2 hover:bg-ink hover:text-paper transition-colors focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"

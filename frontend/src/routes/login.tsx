@@ -52,6 +52,7 @@ function LoginPage() {
 
       {error && (
         <p
+          role="alert"
           className={`${fadeClass} font-mono text-[0.82rem] text-stamp border-l-2 border-stamp pl-2 mt-4`}
           style={fadeIn(3)}
         >

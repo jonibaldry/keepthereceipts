@@ -68,7 +68,7 @@ function DocumentDetailPage() {
 
       {fileAttachment && (
         <div className={`${fadeClass} border border-ink px-5 py-[18px]`} style={fadeIn(4)}>
-          <p className="font-mono text-[0.72rem] tracking-[0.08em] uppercase text-ink-soft m-0 mb-2.5">File</p>
+          <h2 className="font-mono text-[0.72rem] tracking-[0.08em] uppercase text-ink-soft m-0 mb-2.5">File</h2>
           <p className="text-[0.94rem] text-ink m-0 mb-1">{fileAttachment.fileName}</p>
           <p className="font-mono text-[0.74rem] text-ink-soft m-0 mb-2">
             {fileAttachment.mimeType} &middot; {((fileAttachment.fileSize ?? 0) / (1024 * 1024)).toFixed(2)} MB
@@ -84,7 +84,7 @@ function DocumentDetailPage() {
 
       {document.sourceUrl && (
         <div className={`${fadeClass} border border-ink px-5 py-[18px] mt-4`} style={fadeIn(5)}>
-          <p className="font-mono text-[0.72rem] tracking-[0.08em] uppercase text-ink-soft m-0 mb-2.5">Source</p>
+          <h2 className="font-mono text-[0.72rem] tracking-[0.08em] uppercase text-ink-soft m-0 mb-2.5">Source</h2>
           <a
             className="inline-block font-mono text-[0.82rem] text-stamp underline underline-offset-[3px] break-all focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-[3px]"
             href={document.sourceUrl}
