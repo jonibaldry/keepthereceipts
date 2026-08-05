@@ -104,7 +104,9 @@ function withIpfsLinks(document: DocumentRecord) {
 // Returns null on failure so the caller can skip recording an attachment for
 // a file that was never actually written.
 async function writeMetadataFile(documentId: string, document: DocumentRecord): Promise<NewAttachmentInput | null> {
-  const fileName = `${documentId}.metadata`
+  // No need to repeat the document id in the filename — it's already the
+  // enclosing MFS folder.
+  const fileName = "metadata.json"
   try {
     const bytes = new TextEncoder().encode(JSON.stringify(withIpfsLinks(document), null, 2))
     const { cid } = await addBytesToIpfs(bytes, fileName)

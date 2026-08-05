@@ -65,7 +65,7 @@ describe("createDocument", () => {
     mfsCpMock.mockResolvedValue(undefined)
     assertPublicHostnameMock.mockResolvedValue(undefined)
     addBytesMock.mockImplementation(async (_bytes: Uint8Array, name: string) => ({
-      cid: name.endsWith(".metadata") ? "bafymetadata" : "bafyfile",
+      cid: name === "metadata.json" ? "bafymetadata" : "bafyfile",
       size: 11,
     }))
     getDocumentMock.mockImplementation((id: string) => ({
@@ -89,7 +89,7 @@ describe("createDocument", () => {
   it("allows creating a document with no file at all", async () => {
     await createDocument({ userId: "user_1", title: "Just a note", description: "", sourceUrl: "", file: null })
 
-    expect(addBytesMock).toHaveBeenCalledWith(expect.any(Uint8Array), expect.stringMatching(/\.metadata$/))
+    expect(addBytesMock).toHaveBeenCalledWith(expect.any(Uint8Array), "metadata.json")
     expect(insertDocumentMock).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Just a note", sourceUrl: null }),
     )
@@ -220,7 +220,7 @@ describe("createDocument", () => {
     expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_[^/]+\/file$/))
   })
 
-  it("writes a <document_id>.metadata JSON file after the DB rows are created and records it as an attachment", async () => {
+  it("writes a metadata.json file after the DB rows are created and records it as an attachment", async () => {
     await createDocument({
       userId: "user_1",
       title: "Electric bill",
@@ -230,7 +230,7 @@ describe("createDocument", () => {
     })
 
     const documentId = insertDocumentMock.mock.calls[0][0].id
-    expect(mfsCpMock).toHaveBeenCalledWith("bafymetadata", `/document/${documentId}/${documentId}.metadata`)
+    expect(mfsCpMock).toHaveBeenCalledWith("bafymetadata", `/document/${documentId}/metadata.json`)
     // getDocument (the full record) must be fetched before the metadata
     // write, so the export reflects tags/attachments, not just the insert.
     expect(getDocumentMock).toHaveBeenCalledWith(documentId)
@@ -240,7 +240,7 @@ describe("createDocument", () => {
       kind: "metadata",
       status: "complete",
       cid: "bafymetadata",
-      fileName: `${documentId}.metadata`,
+      fileName: "metadata.json",
       mimeType: "application/json",
     })
   })
@@ -271,7 +271,7 @@ describe("createDocument", () => {
 
     await createDocument({ userId: "user_1", title: "Electric bill", description: "", sourceUrl: "", file: null })
 
-    const metadataCall = addBytesMock.mock.calls.find(([, name]) => name.endsWith(".metadata"))
+    const metadataCall = addBytesMock.mock.calls.find(([, name]) => name === "metadata.json")
     const json = JSON.parse(new TextDecoder().decode(metadataCall![0] as Uint8Array))
     expect(json.attachments[0]).toMatchObject({ cid: "bafyfile", ipfsUri: "ipfs://bafyfile" })
   })
@@ -326,7 +326,7 @@ describe("createDocument", () => {
     })
     expect(markDocumentActiveMock).toHaveBeenCalled()
 
-    const metadataCall = addBytesMock.mock.calls.find(([, name]) => name.endsWith(".metadata"))
+    const metadataCall = addBytesMock.mock.calls.find(([, name]) => name === "metadata.json")
     const json = JSON.parse(new TextDecoder().decode(metadataCall![0] as Uint8Array))
     expect(json.attachments.find((a: { kind: string }) => a.kind === "screenshot")).toMatchObject({
       cid: "bafyshot",
@@ -336,7 +336,7 @@ describe("createDocument", () => {
 
   it("does not fail document creation or record an attachment when the metadata file write fails", async () => {
     addBytesMock.mockImplementation(async (_bytes: Uint8Array, name: string) => {
-      if (name.endsWith(".metadata")) throw new Error("ipfs down")
+      if (name === "metadata.json") throw new Error("ipfs down")
       return { cid: "bafyfile", size: 11 }
     })
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
