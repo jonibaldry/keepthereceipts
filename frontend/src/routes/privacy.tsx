@@ -60,9 +60,9 @@ function PrivacyPage() {
 
         <Section title="Third parties" index={6}>
           <p className="m-0">
-            We don&rsquo;t run analytics and we don&rsquo;t share your account data with third parties. Page
-            typefaces are loaded from Google Fonts, which means your browser makes a direct request to Google&rsquo;s
-            font CDN when you load a page.
+            We don&rsquo;t run analytics and we don&rsquo;t share your account data with third parties. Every asset
+            on this site, including fonts, is served from this domain &mdash; your browser never contacts anyone
+            else just from loading a page.
           </p>
         </Section>
 
