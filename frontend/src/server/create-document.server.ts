@@ -39,11 +39,27 @@ function validateSourceUrl(raw: string): string | null {
   return parsed.toString()
 }
 
+// file.name is attacker-controlled and untrusted: a caller posting FormData
+// directly (rather than through a browser's file picker, which already
+// strips any directory portion) can set it to anything, including
+// "../../vault/vault.db". We only ever want the leaf filename — take the
+// last path segment (defeating traversal regardless of how many ".." pieces
+// precede it), strip control characters, and fall back to a safe default if
+// nothing usable is left.
+function safeFileName(name: string): string {
+  const base = name.split(/[/\\]/).pop() ?? ""
+  const cleaned = base.replace(/[\x00-\x1f]/g, "").trim()
+  if (!cleaned || cleaned === "." || cleaned === "..") {
+    return "file"
+  }
+  return cleaned
+}
+
 // Uploads + places the file in MFS before anything is written to the
 // database, so a storage failure never leaves a document row with a
 // missing/broken file attachment.
 async function uploadFileAttachment(documentId: string, file: File): Promise<NewAttachmentInput> {
-  const fileName = file.name || "file"
+  const fileName = safeFileName(file.name || "file")
   const bytes = new Uint8Array(await file.arrayBuffer())
   try {
     const { cid } = await addBytesToIpfs(bytes, fileName)

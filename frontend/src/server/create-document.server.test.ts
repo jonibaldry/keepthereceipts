@@ -136,6 +136,46 @@ describe("createDocument", () => {
     expect(captureAndStoreMock).not.toHaveBeenCalled()
   })
 
+  it("sanitizes a path-traversal filename down to its basename before storing", async () => {
+    await createDocument({
+      userId: "user_1",
+      title: "Electric bill",
+      description: "",
+      sourceUrl: "",
+      file: makeFile("../../vault/vault.db", "not-actually-a-db", "application/octet-stream"),
+    })
+
+    expect(addBytesMock).toHaveBeenCalledWith(expect.any(Uint8Array), "vault.db")
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_[^/]+\/vault\.db$/))
+
+    const fileAttachment = insertAttachmentMock.mock.calls.find((call) => call[0].kind === "file")?.[0]
+    expect(fileAttachment).toMatchObject({ fileName: "vault.db" })
+  })
+
+  it("sanitizes a backslash path-traversal filename down to its basename before storing", async () => {
+    await createDocument({
+      userId: "user_1",
+      title: "Electric bill",
+      description: "",
+      sourceUrl: "",
+      file: makeFile("..\\..\\windows\\evil.exe", "x", "application/octet-stream"),
+    })
+
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_[^/]+\/evil\.exe$/))
+  })
+
+  it("falls back to a safe default filename when sanitizing leaves nothing usable", async () => {
+    await createDocument({
+      userId: "user_1",
+      title: "Electric bill",
+      description: "",
+      sourceUrl: "",
+      file: makeFile("../..", "x", "application/octet-stream"),
+    })
+
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_[^/]+\/file$/))
+  })
+
   it("writes a <document_id>.metadata JSON file after the DB rows are created and records it as an attachment", async () => {
     await createDocument({
       userId: "user_1",
