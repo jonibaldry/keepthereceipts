@@ -67,14 +67,28 @@ async function uploadFileAttachment(documentId: string, file: File): Promise<New
 
 // Best-effort — the database row is the source of truth, this file is a
 // convenience export of it. A hiccup here shouldn't fail document creation.
-async function writeMetadataFile(documentId: string, document: DocumentRecord): Promise<void> {
+// Returns null on failure so the caller can skip recording an attachment for
+// a file that was never actually written.
+async function writeMetadataFile(documentId: string, document: DocumentRecord): Promise<NewAttachmentInput | null> {
+  const fileName = `${documentId}.metadata`
   try {
     const bytes = new TextEncoder().encode(JSON.stringify(document, null, 2))
-    const { cid } = await addBytesToIpfs(bytes, `${documentId}.metadata`)
+    const { cid } = await addBytesToIpfs(bytes, fileName)
     await mfsMkdirP(`/document/${documentId}`)
-    await mfsCp(cid, `/document/${documentId}/${documentId}.metadata`)
+    await mfsCp(cid, `/document/${documentId}/${fileName}`)
+    return {
+      id: generateAttachmentId(),
+      documentId,
+      kind: "metadata",
+      status: "complete",
+      cid,
+      fileName,
+      mimeType: "application/json",
+      fileSize: bytes.length,
+    }
   } catch (err) {
     console.error(`failed to write metadata file for document ${documentId}:`, err)
+    return null
   }
 }
 
@@ -135,7 +149,10 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
     throw new Error(`document ${id} not found immediately after insert`)
   }
 
-  await writeMetadataFile(id, document)
+  const metadataAttachment = await writeMetadataFile(id, document)
+  if (metadataAttachment) {
+    insertAttachment(metadataAttachment)
+  }
 
   if (sourceUrl && screenshotAttachmentId && archiveAttachmentId) {
     // Fire-and-forget: the document is already created and returned to the

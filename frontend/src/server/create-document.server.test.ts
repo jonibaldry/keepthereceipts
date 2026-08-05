@@ -136,7 +136,7 @@ describe("createDocument", () => {
     expect(captureAndStoreMock).not.toHaveBeenCalled()
   })
 
-  it("writes a <document_id>.metadata JSON file after the DB rows are created", async () => {
+  it("writes a <document_id>.metadata JSON file after the DB rows are created and records it as an attachment", async () => {
     await createDocument({
       userId: "user_1",
       title: "Electric bill",
@@ -150,9 +150,18 @@ describe("createDocument", () => {
     // getDocument (the full record) must be fetched before the metadata
     // write, so the export reflects tags/attachments, not just the insert.
     expect(getDocumentMock).toHaveBeenCalledWith(documentId)
+
+    const metadataAttachment = insertAttachmentMock.mock.calls.find((call) => call[0].kind === "metadata")?.[0]
+    expect(metadataAttachment).toMatchObject({
+      kind: "metadata",
+      status: "complete",
+      cid: "bafymetadata",
+      fileName: `${documentId}.metadata`,
+      mimeType: "application/json",
+    })
   })
 
-  it("does not fail document creation when the metadata file write fails", async () => {
+  it("does not fail document creation or record an attachment when the metadata file write fails", async () => {
     addBytesMock.mockImplementation(async (_bytes: Uint8Array, name: string) => {
       if (name.endsWith(".metadata")) throw new Error("ipfs down")
       return { cid: "bafyfile", size: 11 }
@@ -168,6 +177,7 @@ describe("createDocument", () => {
     })
 
     expect(document).toBeTruthy()
+    expect(insertAttachmentMock).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "metadata" }))
     errorSpy.mockRestore()
   })
 

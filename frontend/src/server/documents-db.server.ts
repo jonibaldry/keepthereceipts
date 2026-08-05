@@ -2,7 +2,7 @@ import type Database from "better-sqlite3"
 import { getVaultDb } from "./vault-db.server"
 
 export type CaptureStatus = "pending" | "complete" | "failed"
-export type AttachmentKind = "file" | "screenshot" | "archive"
+export type AttachmentKind = "file" | "screenshot" | "archive" | "metadata"
 
 export interface NewDocumentInput {
   id: string

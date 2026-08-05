@@ -41,6 +41,7 @@ function DocumentDetailPage() {
   const fileAttachment = document.attachments.find((a) => a.kind === "file")
   const screenshotAttachment = document.attachments.find((a) => a.kind === "screenshot")
   const archiveAttachment = document.attachments.find((a) => a.kind === "archive")
+  const metadataAttachment = document.attachments.find((a) => a.kind === "metadata")
 
   return (
     <PageShell currentUser={currentUser}>
@@ -144,10 +145,20 @@ function DocumentDetailPage() {
         </div>
       )}
 
+      {metadataAttachment?.cid && (
+        <a
+          className={`${fadeClass} block font-mono text-[0.82rem] text-stamp underline underline-offset-[3px] mt-5 focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-[3px]`}
+          style={fadeIn(6)}
+          href={`${gatewayUrl}/ipfs/${encodeURIComponent(metadataAttachment.cid)}?filename=${encodeURIComponent(metadataAttachment.fileName)}`}
+        >
+          &rarr; Download metadata (JSON)
+        </a>
+      )}
+
       <a
         href="/documents"
-        className={`${fadeClass} inline-block font-mono text-[0.82rem] text-stamp underline underline-offset-[3px] mt-5 focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-[3px]`}
-        style={fadeIn(6)}
+        className={`${fadeClass} inline-block font-mono text-[0.82rem] text-stamp underline underline-offset-[3px] ${metadataAttachment?.cid ? "mt-2" : "mt-5"} focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-[3px]`}
+        style={fadeIn(metadataAttachment?.cid ? 7 : 6)}
       >
         &larr; Back to documents
       </a>
