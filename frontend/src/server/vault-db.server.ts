@@ -25,6 +25,20 @@ const VAULT_SCHEMA = `
 
   CREATE INDEX IF NOT EXISTS idx_document_tags_tag ON document_tags(tag);
 
+  -- Anyone — no account required — can ask for a document to be taken
+  -- down. Deliberately its own table rather than reusing 'description' on
+  -- documents: a document can accumulate several requests over time, each
+  -- with its own message and evidence files. Declared before 'attachments'
+  -- since that table has a foreign key into this one.
+  CREATE TABLE IF NOT EXISTS takedown_requests (
+    id TEXT PRIMARY KEY,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_takedown_requests_document_id ON takedown_requests(document_id);
+
   -- Every file that belongs to a document: the user-uploaded original
   -- ('file'), plus a best-effort 'screenshot' and 'archive' when the
   -- document has a source_url. mime_type is always populated (never
@@ -38,7 +52,12 @@ const VAULT_SCHEMA = `
     file_name TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     file_size INTEGER,
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    -- Set only for kind = 'takedown_evidence': evidence attached to a
+    -- takedown request, scoped to that request rather than the document at
+    -- large. Every read query that serves the public app filters these out
+    -- by requiring this to be NULL — see attachmentsByDocumentId.
+    takedown_request_id TEXT REFERENCES takedown_requests(id) ON DELETE CASCADE
   );
 
   CREATE INDEX IF NOT EXISTS idx_attachments_document_id ON attachments(document_id);
@@ -65,13 +84,18 @@ const VAULT_SCHEMA = `
 // explicit status, so this default is only ever observed by a migrated
 // pre-existing row.
 function migrateVaultDb(db: Database.Database): void {
-  const columns = db.prepare("PRAGMA table_info(documents)").all() as { name: string }[]
-  const columnNames = new Set(columns.map((c) => c.name))
-  if (!columnNames.has("status")) {
+  const documentColumns = db.prepare("PRAGMA table_info(documents)").all() as { name: string }[]
+  const documentColumnNames = new Set(documentColumns.map((c) => c.name))
+  if (!documentColumnNames.has("status")) {
     db.exec("ALTER TABLE documents ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
   }
-  if (!columnNames.has("deleted_at")) {
+  if (!documentColumnNames.has("deleted_at")) {
     db.exec("ALTER TABLE documents ADD COLUMN deleted_at TEXT")
+  }
+
+  const attachmentColumns = db.prepare("PRAGMA table_info(attachments)").all() as { name: string }[]
+  if (!attachmentColumns.some((c) => c.name === "takedown_request_id")) {
+    db.exec("ALTER TABLE attachments ADD COLUMN takedown_request_id TEXT REFERENCES takedown_requests(id) ON DELETE CASCADE")
   }
 }
 

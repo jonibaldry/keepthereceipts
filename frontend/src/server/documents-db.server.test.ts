@@ -6,6 +6,7 @@ import {
   insertAttachment,
   insertDocument,
   insertDocumentTags,
+  insertTakedownRequest,
   listDocuments,
   markDocumentActive,
   markDocumentDeleted,
@@ -205,5 +206,28 @@ describe("documents-db.server", () => {
     seedDocument("doc_1")
     markDocumentDeleted("doc_1", db)
     expect(() => markDocumentDeleted("doc_1", db)).not.toThrow()
+  })
+
+  it("excludes takedown evidence attachments from the public read path", () => {
+    seedDocument("doc_1")
+    seedFileAttachment("att_1", "doc_1")
+    insertTakedownRequest({ id: "takedown_1", documentId: "doc_1", message: "this is my info" }, db)
+    insertAttachment(
+      {
+        id: "att_evidence",
+        documentId: "doc_1",
+        kind: "takedown_evidence",
+        status: "complete",
+        cid: "bafyevidence",
+        fileName: "id-card.jpg",
+        mimeType: "image/jpeg",
+        fileSize: 999,
+        takedownRequestId: "takedown_1",
+      },
+      db,
+    )
+
+    const doc = getDocument("doc_1", db)
+    expect(doc?.attachments.map((a) => a.kind)).toEqual(["file"])
   })
 })

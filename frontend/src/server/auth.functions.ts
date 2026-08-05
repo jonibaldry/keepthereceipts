@@ -1,22 +1,15 @@
 import { createServerFn } from "@tanstack/react-start"
-import { getRequestIP } from "@tanstack/react-start/server"
 import { loginUser, LoginError } from "./login-user.server"
 import { registerUser, RegistrationError } from "./register-user.server"
 import { createSessionToken, setSessionCookie, clearSessionCookie, readSessionUser } from "./session.server"
 import { assertSameOrigin } from "./same-origin.server"
 import { checkRateLimit, RateLimitError } from "./rate-limit.server"
 import { isUserAdmin } from "./users-db.server"
+import { clientIp } from "./client-ip.server"
 import type { SessionUser } from "./session.server"
 
 export interface CurrentUser extends SessionUser {
   isAdmin: boolean
-}
-
-// Caddy is the only thing that ever talks to this app directly (see
-// docker-compose.yml/Caddyfile), and it sets X-Forwarded-For on every
-// proxied request, so it's safe to trust here.
-function clientIp(): string {
-  return getRequestIP({ xForwardedFor: true }) ?? "unknown"
 }
 
 // Generous enough that a user fumbling their password a few times never

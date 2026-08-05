@@ -11,3 +11,7 @@ export function generateDocumentId(): string {
 export function generateAttachmentId(): string {
   return typeid("att").toString()
 }
+
+export function generateTakedownRequestId(): string {
+  return typeid("takedown").toString()
+}

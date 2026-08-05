@@ -3,6 +3,7 @@ import { generateAttachmentId, generateDocumentId } from "./id.server"
 import { extractHashtags } from "../utils/hashtags"
 import { captureAndStore } from "./capture.server"
 import { assertPublicHostname, UnsafeUrlError } from "./network-guard.server"
+import { safeFileName } from "./safe-filename.server"
 import {
   getDocument,
   insertAttachment,
@@ -57,22 +58,6 @@ async function validateSourceUrl(raw: string): Promise<string | null> {
     throw err
   }
   return parsed.toString()
-}
-
-// file.name is attacker-controlled and untrusted: a caller posting FormData
-// directly (rather than through a browser's file picker, which already
-// strips any directory portion) can set it to anything, including
-// "../../vault/vault.db". We only ever want the leaf filename — take the
-// last path segment (defeating traversal regardless of how many ".." pieces
-// precede it), strip control characters, and fall back to a safe default if
-// nothing usable is left.
-function safeFileName(name: string): string {
-  const base = name.split(/[/\\]/).pop() ?? ""
-  const cleaned = base.replace(/[\x00-\x1f]/g, "").trim()
-  if (!cleaned || cleaned === "." || cleaned === "..") {
-    return "file"
-  }
-  return cleaned
 }
 
 // Uploads + places the file in MFS before anything is written to the

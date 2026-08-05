@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { TypeID } from "typeid-js"
-import { generateAttachmentId, generateDocumentId, generateUserId } from "./id.server"
+import { generateAttachmentId, generateDocumentId, generateTakedownRequestId, generateUserId } from "./id.server"
 
 describe("id.server", () => {
   it("generates an id prefixed with user_", () => {
@@ -28,5 +28,11 @@ describe("id.server", () => {
     const id = generateAttachmentId()
     expect(id).toMatch(/^att_[0-9a-z]+$/)
     expect(TypeID.fromString(id, "att").toString()).toBe(id)
+  })
+
+  it("generates a takedown request id prefixed with takedown_", () => {
+    const id = generateTakedownRequestId()
+    expect(id).toMatch(/^takedown_[0-9a-z]+$/)
+    expect(TypeID.fromString(id, "takedown").toString()).toBe(id)
   })
 })

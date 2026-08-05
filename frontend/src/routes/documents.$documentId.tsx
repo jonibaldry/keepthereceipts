@@ -229,13 +229,23 @@ function DocumentDetailPage() {
         </a>
       )}
 
-      <a
-        href="/documents"
-        className={`${fadeClass} inline-block font-mono text-[0.82rem] text-stamp underline underline-offset-[3px] ${metadataAttachment?.cid ? "mt-2" : "mt-5"} focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-[3px]`}
+      <div
+        className={`${fadeClass} flex items-center gap-3 ${metadataAttachment?.cid ? "mt-2" : "mt-5"}`}
         style={fadeIn(metadataAttachment?.cid ? 7 : 6)}
       >
-        &larr; Back to documents
-      </a>
+        <a
+          href="/documents"
+          className="inline-block font-mono text-[0.82rem] text-stamp underline underline-offset-[3px] focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-[3px]"
+        >
+          &larr; Back to documents
+        </a>
+        <a
+          href={`/documents/${document.id}/takedown`}
+          className="inline-block font-mono text-[0.82rem] text-ink-soft underline underline-offset-[3px] hover:text-stamp focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-[3px]"
+        >
+          Request takedown
+        </a>
+      </div>
 
       {currentUser?.isAdmin && <DeleteDocumentControl documentId={document.id} />}
     </PageShell>
