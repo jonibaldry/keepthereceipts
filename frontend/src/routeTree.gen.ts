@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AdminTakedownsRouteImport } from './routes/admin.takedowns'
 import { Route as DocumentsIndexRouteImport } from './routes/documents.index'
 import { Route as DocumentsDocumentIdRouteImport } from './routes/documents.$documentId'
 import { Route as DocumentsNewRouteImport } from './routes/documents.new'
@@ -37,6 +38,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTakedownsRoute = AdminTakedownsRouteImport.update({
+  id: '/admin/takedowns',
+  path: '/admin/takedowns',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocumentsIndexRoute = DocumentsIndexRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/admin/takedowns': typeof AdminTakedownsRoute
   '/documents/$documentId': typeof DocumentsDocumentIdRoute
   '/documents/new': typeof DocumentsNewRoute
   '/documents/search': typeof DocumentsSearchRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/admin/takedowns': typeof AdminTakedownsRoute
   '/documents/$documentId': typeof DocumentsDocumentIdRoute
   '/documents/new': typeof DocumentsNewRoute
   '/documents/search': typeof DocumentsSearchRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/privacy': typeof PrivacyRoute
   '/register': typeof RegisterRoute
+  '/admin/takedowns': typeof AdminTakedownsRoute
   '/documents/$documentId': typeof DocumentsDocumentIdRoute
   '/documents/new': typeof DocumentsNewRoute
   '/documents/search': typeof DocumentsSearchRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/register'
+    | '/admin/takedowns'
     | '/documents/$documentId'
     | '/documents/new'
     | '/documents/search'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/register'
+    | '/admin/takedowns'
     | '/documents/$documentId'
     | '/documents/new'
     | '/documents/search'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/privacy'
     | '/register'
+    | '/admin/takedowns'
     | '/documents/$documentId'
     | '/documents/new'
     | '/documents/search'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PrivacyRoute: typeof PrivacyRoute
   RegisterRoute: typeof RegisterRoute
+  AdminTakedownsRoute: typeof AdminTakedownsRoute
   DocumentsDocumentIdRoute: typeof DocumentsDocumentIdRoute
   DocumentsNewRoute: typeof DocumentsNewRoute
   DocumentsSearchRoute: typeof DocumentsSearchRoute
@@ -176,6 +189,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/takedowns': {
+      id: '/admin/takedowns'
+      path: '/admin/takedowns'
+      fullPath: '/admin/takedowns'
+      preLoaderRoute: typeof AdminTakedownsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/documents/': {
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PrivacyRoute: PrivacyRoute,
   RegisterRoute: RegisterRoute,
+  AdminTakedownsRoute: AdminTakedownsRoute,
   DocumentsDocumentIdRoute: DocumentsDocumentIdRoute,
   DocumentsNewRoute: DocumentsNewRoute,
   DocumentsSearchRoute: DocumentsSearchRoute,

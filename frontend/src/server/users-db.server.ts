@@ -30,6 +30,7 @@ const USERS_SCHEMA = `
   );
 
   CREATE INDEX IF NOT EXISTS idx_takedown_requests_document_id ON takedown_requests(document_id);
+  CREATE INDEX IF NOT EXISTS idx_takedown_requests_created_at ON takedown_requests(created_at);
 
   CREATE TABLE IF NOT EXISTS takedown_attachments (
     id TEXT PRIMARY KEY,
@@ -105,6 +106,53 @@ export interface NewTakedownAttachmentInput {
   fileSize: number | null
 }
 
+export interface TakedownAttachmentRecord {
+  id: string
+  takedownRequestId: string
+  cid: string | null
+  fileName: string
+  mimeType: string
+  fileSize: number | null
+  createdAt: string
+}
+
+export interface TakedownRequestRecord {
+  id: string
+  documentId: string
+  message: string
+  createdAt: string
+  attachments: TakedownAttachmentRecord[]
+}
+
+interface TakedownRequestRow {
+  id: string
+  document_id: string
+  message: string
+  created_at: string
+}
+
+interface TakedownAttachmentRow {
+  id: string
+  takedown_request_id: string
+  cid: string | null
+  file_name: string
+  mime_type: string
+  file_size: number | null
+  created_at: string
+}
+
+function rowToTakedownAttachment(row: TakedownAttachmentRow): TakedownAttachmentRecord {
+  return {
+    id: row.id,
+    takedownRequestId: row.takedown_request_id,
+    cid: row.cid,
+    fileName: row.file_name,
+    mimeType: row.mime_type,
+    fileSize: row.file_size,
+    createdAt: row.created_at,
+  }
+}
+
 export function insertTakedownRequest(input: NewTakedownRequestInput, db?: Database.Database): void {
   db ??= getUsersDb()
   db.prepare("INSERT INTO takedown_requests (id, document_id, message) VALUES (?, ?, ?)").run(
@@ -120,4 +168,56 @@ export function insertTakedownAttachment(input: NewTakedownAttachmentInput, db?:
     `INSERT INTO takedown_attachments (id, takedown_request_id, cid, file_name, mime_type, file_size)
      VALUES (?, ?, ?, ?, ?, ?)`,
   ).run(input.id, input.takedownRequestId, input.cid, input.fileName, input.mimeType, input.fileSize)
+}
+
+// Admin-only read path (see requireAdmin in the takedown review server
+// function) — every open takedown request, newest first, with its evidence
+// attachments nested underneath.
+export function listTakedownRequests(db?: Database.Database): TakedownRequestRecord[] {
+  db ??= getUsersDb()
+  const requests = db.prepare("SELECT * FROM takedown_requests ORDER BY created_at DESC").all() as TakedownRequestRow[]
+  const ids = requests.map((r) => r.id)
+  const attachmentsByRequest = new Map<string, TakedownAttachmentRecord[]>()
+  if (ids.length > 0) {
+    const placeholders = ids.map(() => "?").join(", ")
+    const rows = db
+      .prepare(
+        `SELECT * FROM takedown_attachments WHERE takedown_request_id IN (${placeholders}) ORDER BY created_at`,
+      )
+      .all(...ids) as TakedownAttachmentRow[]
+    for (const row of rows) {
+      const attachment = rowToTakedownAttachment(row)
+      const existing = attachmentsByRequest.get(row.takedown_request_id)
+      if (existing) {
+        existing.push(attachment)
+      } else {
+        attachmentsByRequest.set(row.takedown_request_id, [attachment])
+      }
+    }
+  }
+  return requests.map((row) => ({
+    id: row.id,
+    documentId: row.document_id,
+    message: row.message,
+    createdAt: row.created_at,
+    attachments: attachmentsByRequest.get(row.id) ?? [],
+  }))
+}
+
+// Called when a document is deleted (whether via takedown approval or a
+// plain admin delete — see delete-document.server.ts) so no stale request
+// is left pointing at a document that no longer exists. Returns the cids of
+// every evidence attachment that was just cascade-deleted, so the caller
+// can unpin them from IPFS.
+export function deleteTakedownRequestsForDocument(documentId: string, db?: Database.Database): string[] {
+  db ??= getUsersDb()
+  const rows = db
+    .prepare(
+      `SELECT takedown_attachments.cid FROM takedown_attachments
+       JOIN takedown_requests ON takedown_requests.id = takedown_attachments.takedown_request_id
+       WHERE takedown_requests.document_id = ?`,
+    )
+    .all(documentId) as { cid: string | null }[]
+  db.prepare("DELETE FROM takedown_requests WHERE document_id = ?").run(documentId)
+  return rows.map((r) => r.cid).filter((cid): cid is string => cid !== null)
 }

@@ -1,6 +1,13 @@
 import type Database from "better-sqlite3"
 import { beforeEach, describe, expect, it } from "vitest"
-import { createUsersDb, insertTakedownAttachment, insertTakedownRequest, isUserAdmin } from "./users-db.server"
+import {
+  createUsersDb,
+  deleteTakedownRequestsForDocument,
+  insertTakedownAttachment,
+  insertTakedownRequest,
+  isUserAdmin,
+  listTakedownRequests,
+} from "./users-db.server"
 
 describe("users-db.server", () => {
   let db: Database.Database
@@ -75,5 +82,51 @@ describe("users-db.server", () => {
 
     const remaining = db.prepare("SELECT COUNT(*) as count FROM takedown_attachments").get() as { count: number }
     expect(remaining.count).toBe(0)
+  })
+
+  it("lists takedown requests newest-first with their attachments nested", () => {
+    insertTakedownRequest({ id: "takedown_1", documentId: "doc_1", message: "first" }, db)
+    insertTakedownRequest({ id: "takedown_2", documentId: "doc_2", message: "second" }, db)
+    insertTakedownAttachment(
+      {
+        id: "takedownatt_1",
+        takedownRequestId: "takedown_1",
+        cid: "bafyevidence",
+        fileName: "evidence.png",
+        mimeType: "image/png",
+        fileSize: 10,
+      },
+      db,
+    )
+
+    const requests = listTakedownRequests(db)
+    expect(requests.map((r) => r.id)).toEqual(["takedown_2", "takedown_1"])
+    expect(requests.find((r) => r.id === "takedown_1")?.attachments).toEqual([
+      expect.objectContaining({ id: "takedownatt_1", cid: "bafyevidence", fileName: "evidence.png" }),
+    ])
+    expect(requests.find((r) => r.id === "takedown_2")?.attachments).toEqual([])
+  })
+
+  it("deletes every takedown request for a document and returns its evidence cids", () => {
+    insertTakedownRequest({ id: "takedown_1", documentId: "doc_1", message: "first" }, db)
+    insertTakedownRequest({ id: "takedown_2", documentId: "doc_1", message: "second" }, db)
+    insertTakedownRequest({ id: "takedown_3", documentId: "doc_2", message: "unrelated" }, db)
+    insertTakedownAttachment(
+      { id: "takedownatt_1", takedownRequestId: "takedown_1", cid: "bafy1", fileName: "a.png", mimeType: "image/png", fileSize: 1 },
+      db,
+    )
+    insertTakedownAttachment(
+      { id: "takedownatt_2", takedownRequestId: "takedown_2", cid: "bafy2", fileName: "b.png", mimeType: "image/png", fileSize: 1 },
+      db,
+    )
+    insertTakedownAttachment(
+      { id: "takedownatt_3", takedownRequestId: "takedown_2", cid: null, fileName: "c.png", mimeType: "image/png", fileSize: 1 },
+      db,
+    )
+
+    const cids = deleteTakedownRequestsForDocument("doc_1", db)
+
+    expect(cids.sort()).toEqual(["bafy1", "bafy2"])
+    expect(listTakedownRequests(db).map((r) => r.id)).toEqual(["takedown_3"])
   })
 })

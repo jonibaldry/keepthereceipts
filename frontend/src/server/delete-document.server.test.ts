@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { mfsRmMock, pinRmMock, getDocumentMock, markDocumentDeletedMock } = vi.hoisted(() => ({
-  mfsRmMock: vi.fn(),
-  pinRmMock: vi.fn(),
-  getDocumentMock: vi.fn(),
-  markDocumentDeletedMock: vi.fn(),
-}))
+const { mfsRmMock, pinRmMock, getDocumentMock, markDocumentDeletedMock, deleteTakedownRequestsForDocumentMock } =
+  vi.hoisted(() => ({
+    mfsRmMock: vi.fn(),
+    pinRmMock: vi.fn(),
+    getDocumentMock: vi.fn(),
+    markDocumentDeletedMock: vi.fn(),
+    deleteTakedownRequestsForDocumentMock: vi.fn(),
+  }))
 
 vi.mock("./ipfs.server", () => ({
   mfsRm: mfsRmMock,
@@ -17,6 +19,10 @@ vi.mock("./documents-db.server", () => ({
   markDocumentDeleted: markDocumentDeletedMock,
 }))
 
+vi.mock("./users-db.server", () => ({
+  deleteTakedownRequestsForDocument: deleteTakedownRequestsForDocumentMock,
+}))
+
 import { deleteDocument, DeleteDocumentError } from "./delete-document.server"
 
 describe("deleteDocument", () => {
@@ -24,6 +30,7 @@ describe("deleteDocument", () => {
     vi.clearAllMocks()
     mfsRmMock.mockResolvedValue(undefined)
     pinRmMock.mockResolvedValue(undefined)
+    deleteTakedownRequestsForDocumentMock.mockReturnValue([])
   })
 
   it("throws when the document does not exist", async () => {
@@ -90,6 +97,28 @@ describe("deleteDocument", () => {
 
     await expect(deleteDocument("doc_1")).resolves.toBeUndefined()
     expect(pinRmMock).toHaveBeenCalledWith("bafyshot")
+
+    errorSpy.mockRestore()
+  })
+
+  it("clears any open takedown requests for the document and unpins their evidence", async () => {
+    getDocumentMock.mockReturnValue({ id: "doc_1", attachments: [] })
+    deleteTakedownRequestsForDocumentMock.mockReturnValue(["bafyevidence1", "bafyevidence2"])
+
+    await deleteDocument("doc_1")
+
+    expect(deleteTakedownRequestsForDocumentMock).toHaveBeenCalledWith("doc_1")
+    expect(pinRmMock).toHaveBeenCalledWith("bafyevidence1")
+    expect(pinRmMock).toHaveBeenCalledWith("bafyevidence2")
+  })
+
+  it("does not throw when unpinning takedown evidence fails", async () => {
+    getDocumentMock.mockReturnValue({ id: "doc_1", attachments: [] })
+    deleteTakedownRequestsForDocumentMock.mockReturnValue(["bafyevidence1"])
+    pinRmMock.mockRejectedValue(new Error("not pinned"))
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    await expect(deleteDocument("doc_1")).resolves.toBeUndefined()
 
     errorSpy.mockRestore()
   })

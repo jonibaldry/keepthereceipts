@@ -2,17 +2,17 @@ import { useRouter } from "@tanstack/react-router"
 import { useServerFn } from "@tanstack/react-start"
 import { fadeClass, fadeIn } from "../utils/animation"
 import { logout } from "../server/auth.functions"
-import type { SessionUser } from "../server/session.server"
+import type { CurrentUser } from "../server/auth.functions"
 
 interface PageShellProps {
-  currentUser: SessionUser | null
+  currentUser: CurrentUser | null
   children: React.ReactNode
 }
 
 const navLinkClass =
   "underline underline-offset-2 hover:text-stamp focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
 
-function AuthNav({ currentUser }: { currentUser: SessionUser | null }) {
+function AuthNav({ currentUser }: { currentUser: CurrentUser | null }) {
   const router = useRouter()
   const logoutFn = useServerFn(logout)
 
@@ -25,6 +25,11 @@ function AuthNav({ currentUser }: { currentUser: SessionUser | null }) {
         <a href="/documents/search" className={navLinkClass}>
           search
         </a>
+        {currentUser.isAdmin && (
+          <a href="/admin/takedowns" className={navLinkClass}>
+            takedowns
+          </a>
+        )}
         <form
           className="inline"
           onSubmit={async (e) => {
