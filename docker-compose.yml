@@ -55,6 +55,11 @@ services:
       DNSLINK_DOMAIN: keepthereceipts.net
       USERS_DB_PATH: /data/users/users.db
       PORT: "3000"
+      # Session tokens are only unforgeable as long as this stays secret —
+      # read from .env (gitignored) via Compose's automatic interpolation,
+      # not env_file, so the frontend container doesn't also inherit the
+      # unrelated deSEC credentials .env holds for dns-link-desec.sh.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
     volumes:
       - ./data/db:/data/db               # read-write: frontend owns writes to vault.db
       - ./data/export:/export            # shared staging area with ipfs-node for uploads
