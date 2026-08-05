@@ -161,6 +161,92 @@ describe("createDocument", () => {
     })
   })
 
+  it("includes an ipfs:// link for every attachment in the metadata export", async () => {
+    getDocumentMock.mockImplementation((id: string) => ({
+      id,
+      userId: "user_1",
+      title: "Electric bill",
+      description: "",
+      sourceUrl: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      tags: [],
+      attachments: [
+        {
+          id: "att_1",
+          documentId: id,
+          kind: "file",
+          status: "complete",
+          cid: "bafyfile",
+          fileName: "bill.pdf",
+          mimeType: "application/pdf",
+          fileSize: 9,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    }))
+
+    await createDocument({ userId: "user_1", title: "Electric bill", description: "", sourceUrl: "", file: null })
+
+    const metadataCall = addBytesMock.mock.calls.find(([, name]) => name.endsWith(".metadata"))
+    const json = JSON.parse(new TextDecoder().decode(metadataCall![0] as Uint8Array))
+    expect(json.attachments[0]).toMatchObject({ cid: "bafyfile", ipfsUri: "ipfs://bafyfile" })
+  })
+
+  it("delays the metadata write until capture settles when a source URL is given, then links the final cids", async () => {
+    let resolveCapture!: () => void
+    captureAndStoreMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveCapture = resolve
+      }),
+    )
+    getDocumentMock.mockImplementation((id: string) => ({
+      id,
+      userId: "user_1",
+      title: "Electric bill",
+      description: "",
+      sourceUrl: "https://example.com/bill",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      tags: [],
+      attachments: [
+        {
+          id: "att_shot",
+          documentId: id,
+          kind: "screenshot",
+          status: "complete",
+          cid: "bafyshot",
+          fileName: "screenshot.png",
+          mimeType: "image/png",
+          fileSize: 42,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    }))
+
+    await createDocument({
+      userId: "user_1",
+      title: "Electric bill",
+      description: "",
+      sourceUrl: "https://example.com/bill",
+      file: null,
+    })
+
+    // Capture hasn't settled yet, so the metadata file must not have been
+    // written — it would otherwise miss the screenshot/archive cids.
+    expect(insertAttachmentMock).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "metadata" }))
+
+    resolveCapture()
+    await vi.waitFor(() => {
+      expect(insertAttachmentMock).toHaveBeenCalledWith(expect.objectContaining({ kind: "metadata" }))
+    })
+
+    const metadataCall = addBytesMock.mock.calls.find(([, name]) => name.endsWith(".metadata"))
+    const json = JSON.parse(new TextDecoder().decode(metadataCall![0] as Uint8Array))
+    expect(json.attachments.find((a: { kind: string }) => a.kind === "screenshot")).toMatchObject({
+      cid: "bafyshot",
+      ipfsUri: "ipfs://bafyshot",
+    })
+  })
+
   it("does not fail document creation or record an attachment when the metadata file write fails", async () => {
     addBytesMock.mockImplementation(async (_bytes: Uint8Array, name: string) => {
       if (name.endsWith(".metadata")) throw new Error("ipfs down")

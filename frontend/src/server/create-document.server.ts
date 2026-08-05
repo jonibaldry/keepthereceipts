@@ -65,6 +65,19 @@ async function uploadFileAttachment(documentId: string, file: File): Promise<New
   }
 }
 
+// Augments each attachment with an `ipfs://` URI so the exported metadata
+// file is a self-contained pointer to everything belonging to the document,
+// not just this JSON blob itself.
+function withIpfsLinks(document: DocumentRecord) {
+  return {
+    ...document,
+    attachments: document.attachments.map((attachment) => ({
+      ...attachment,
+      ipfsUri: attachment.cid ? `ipfs://${attachment.cid}` : null,
+    })),
+  }
+}
+
 // Best-effort — the database row is the source of truth, this file is a
 // convenience export of it. A hiccup here shouldn't fail document creation.
 // Returns null on failure so the caller can skip recording an attachment for
@@ -72,7 +85,7 @@ async function uploadFileAttachment(documentId: string, file: File): Promise<New
 async function writeMetadataFile(documentId: string, document: DocumentRecord): Promise<NewAttachmentInput | null> {
   const fileName = `${documentId}.metadata`
   try {
-    const bytes = new TextEncoder().encode(JSON.stringify(document, null, 2))
+    const bytes = new TextEncoder().encode(JSON.stringify(withIpfsLinks(document), null, 2))
     const { cid } = await addBytesToIpfs(bytes, fileName)
     await mfsMkdirP(`/document/${documentId}`)
     await mfsCp(cid, `/document/${documentId}/${fileName}`)
@@ -89,6 +102,29 @@ async function writeMetadataFile(documentId: string, document: DocumentRecord): 
   } catch (err) {
     console.error(`failed to write metadata file for document ${documentId}:`, err)
     return null
+  }
+}
+
+// Fire-and-forget follow-up once a document with a source URL has been
+// returned to the caller: waits for the screenshot/archive capture to
+// settle, then writes the metadata file so it can include ipfs links for
+// every attachment in its final state, not just the ones ready at creation.
+async function captureAndWriteMetadata(
+  documentId: string,
+  sourceUrl: string,
+  screenshotAttachmentId: string,
+  archiveAttachmentId: string,
+): Promise<void> {
+  // captureAndStore never rejects, but guard anyway since we're not
+  // propagating this failure to any caller.
+  await captureAndStore(documentId, sourceUrl, screenshotAttachmentId, archiveAttachmentId).catch((err) =>
+    console.error(`capture failed for document ${documentId}:`, err),
+  )
+  const document = getDocument(documentId)
+  if (!document) return
+  const metadataAttachment = await writeMetadataFile(documentId, document)
+  if (metadataAttachment) {
+    insertAttachment(metadataAttachment)
   }
 }
 
@@ -149,19 +185,19 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
     throw new Error(`document ${id} not found immediately after insert`)
   }
 
-  const metadataAttachment = await writeMetadataFile(id, document)
-  if (metadataAttachment) {
-    insertAttachment(metadataAttachment)
-  }
-
   if (sourceUrl && screenshotAttachmentId && archiveAttachmentId) {
     // Fire-and-forget: the document is already created and returned to the
-    // caller, capture fills in the screenshot/archive attachments
-    // asynchronously. captureAndStore never rejects, but guard anyway since
-    // this promise is intentionally unawaited.
-    void captureAndStore(id, sourceUrl, screenshotAttachmentId, archiveAttachmentId).catch((err) =>
-      console.error(`capture failed for document ${id}:`, err),
-    )
+    // caller. Capture fills in the screenshot/archive attachments in the
+    // background, and the metadata file is written only once that's done
+    // (see captureAndWriteMetadata) so it can link to their final cids.
+    void captureAndWriteMetadata(id, sourceUrl, screenshotAttachmentId, archiveAttachmentId)
+  } else {
+    // No background capture to wait for — every attachment is already in
+    // its final state, so write the metadata file synchronously.
+    const metadataAttachment = await writeMetadataFile(id, document)
+    if (metadataAttachment) {
+      insertAttachment(metadataAttachment)
+    }
   }
 
   return document
