@@ -24,16 +24,28 @@ vi.mock("./documents-db.server", () => ({
 
 import { captureAndStore } from "./capture.server"
 
-function makeFakeBrowser() {
+function makeFakePage() {
   const cdpSend = vi.fn(async () => ({ data: "<mhtml archive>" }))
-  const page = {
+  return {
+    route: vi.fn(async (_pattern: string, _handler: (route: ReturnType<typeof fakeRoute>) => Promise<void>) => {}),
     goto: vi.fn(async () => {}),
     screenshot: vi.fn(async () => Buffer.from("png-bytes")),
     context: () => ({ newCDPSession: async () => ({ send: cdpSend }) }),
   }
+}
+
+function makeFakeBrowser(page = makeFakePage()) {
   return {
     newPage: vi.fn(async () => page),
     close: vi.fn(async () => {}),
+  }
+}
+
+function fakeRoute(url: string) {
+  return {
+    request: () => ({ url: () => url }),
+    continue: vi.fn(async () => {}),
+    abort: vi.fn(async () => {}),
   }
 }
 
@@ -89,5 +101,80 @@ describe("captureAndStore", () => {
       status: "complete",
     })
     errorSpy.mockRestore()
+  })
+
+  it("registers a request-blocking route before navigating, so it's in place for every request the page makes", async () => {
+    const page = makeFakePage()
+    launchMock.mockResolvedValue(makeFakeBrowser(page))
+    addBytesMock
+      .mockResolvedValueOnce({ cid: "bafyshot", size: 9 })
+      .mockResolvedValueOnce({ cid: "bafyarchive", size: 20 })
+
+    await captureAndStore("doc_1", "https://example.com/receipt", "att_shot", "att_arch")
+
+    expect(page.route).toHaveBeenCalledWith("**/*", expect.any(Function))
+    const routeCallOrder = page.route.mock.invocationCallOrder[0]
+    const gotoCallOrder = page.goto.mock.invocationCallOrder[0]
+    expect(routeCallOrder).toBeLessThan(gotoCallOrder)
+  })
+
+  describe("the registered request-blocking route", () => {
+    async function getRouteHandler() {
+      const page = makeFakePage()
+      launchMock.mockResolvedValue(makeFakeBrowser(page))
+      addBytesMock
+        .mockResolvedValueOnce({ cid: "bafyshot", size: 9 })
+        .mockResolvedValueOnce({ cid: "bafyarchive", size: 20 })
+      await captureAndStore("doc_1", "https://example.com/receipt", "att_shot", "att_arch")
+      return page.route.mock.calls[0][1]
+    }
+
+    it("allows a request to a public address", async () => {
+      const handler = await getRouteHandler()
+      const route = fakeRoute("https://example.com/logo.png")
+
+      await handler(route)
+
+      expect(route.continue).toHaveBeenCalled()
+      expect(route.abort).not.toHaveBeenCalled()
+    })
+
+    it("blocks a request to a private IPv4 address", async () => {
+      const handler = await getRouteHandler()
+      const route = fakeRoute("http://10.0.0.5/secret")
+
+      await handler(route)
+
+      expect(route.abort).toHaveBeenCalledWith("blockedbyclient")
+      expect(route.continue).not.toHaveBeenCalled()
+    })
+
+    it("blocks a request to a cloud metadata address embedded in the page", async () => {
+      const handler = await getRouteHandler()
+      const route = fakeRoute("http://169.254.169.254/latest/meta-data/")
+
+      await handler(route)
+
+      expect(route.abort).toHaveBeenCalledWith("blockedbyclient")
+    })
+
+    it("blocks a request to localhost regardless of port", async () => {
+      const handler = await getRouteHandler()
+      const route = fakeRoute("http://127.0.0.1:5001/api/v0/id")
+
+      await handler(route)
+
+      expect(route.abort).toHaveBeenCalledWith("blockedbyclient")
+    })
+
+    it("allows a non-http(s) request (e.g. data:) through unchecked", async () => {
+      const handler = await getRouteHandler()
+      const route = fakeRoute("data:image/png;base64,aGVsbG8=")
+
+      await handler(route)
+
+      expect(route.continue).toHaveBeenCalled()
+      expect(route.abort).not.toHaveBeenCalled()
+    })
   })
 })

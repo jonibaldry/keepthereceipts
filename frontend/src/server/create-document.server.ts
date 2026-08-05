@@ -2,6 +2,7 @@ import { addBytesToIpfs, mfsCp, mfsMkdirP } from "./ipfs.server"
 import { generateAttachmentId, generateDocumentId } from "./id.server"
 import { extractHashtags } from "../utils/hashtags"
 import { captureAndStore } from "./capture.server"
+import { assertPublicHostname, UnsafeUrlError } from "./network-guard.server"
 import { getDocument, insertAttachment, insertDocument, insertDocumentTags } from "./documents-db.server"
 import type { DocumentRecord, NewAttachmentInput } from "./documents-db.server"
 
@@ -24,7 +25,12 @@ export interface CreateDocumentInput {
   file: File | null
 }
 
-function validateSourceUrl(raw: string): string | null {
+// This is a fast, user-facing rejection for the obvious case (an internal
+// address typed directly into the sourceUrl field) — it is NOT the actual
+// SSRF defense. A page at an otherwise-public URL can still embed a
+// resource (an <img>, an <iframe>) pointing at an internal address, so the
+// real enforcement is per-request during capture; see capture.server.ts.
+async function validateSourceUrl(raw: string): Promise<string | null> {
   const trimmed = raw.trim()
   if (!trimmed) return null
   let parsed: URL
@@ -35,6 +41,14 @@ function validateSourceUrl(raw: string): string | null {
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new CreateDocumentError("source URL must use http or https")
+  }
+  try {
+    await assertPublicHostname(parsed.hostname)
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) {
+      throw new CreateDocumentError("source URL must not point to a private or internal address")
+    }
+    throw err
   }
   return parsed.toString()
 }
@@ -157,7 +171,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
     throw new CreateDocumentError("file must be 100MB or smaller")
   }
 
-  const sourceUrl = validateSourceUrl(input.sourceUrl)
+  const sourceUrl = await validateSourceUrl(input.sourceUrl)
   const id = generateDocumentId()
 
   const fileAttachment = file ? await uploadFileAttachment(id, file) : null

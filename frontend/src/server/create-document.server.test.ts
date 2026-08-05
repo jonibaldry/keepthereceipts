@@ -1,16 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { addBytesMock, mfsCpMock, mfsMkdirPMock, captureAndStoreMock, insertDocumentMock, insertTagsMock, insertAttachmentMock, getDocumentMock } =
-  vi.hoisted(() => ({
-    addBytesMock: vi.fn(),
-    mfsCpMock: vi.fn(),
-    mfsMkdirPMock: vi.fn(),
-    captureAndStoreMock: vi.fn(),
-    insertDocumentMock: vi.fn(),
-    insertTagsMock: vi.fn(),
-    insertAttachmentMock: vi.fn(),
-    getDocumentMock: vi.fn(),
-  }))
+const {
+  addBytesMock,
+  mfsCpMock,
+  mfsMkdirPMock,
+  captureAndStoreMock,
+  insertDocumentMock,
+  insertTagsMock,
+  insertAttachmentMock,
+  getDocumentMock,
+  assertPublicHostnameMock,
+} = vi.hoisted(() => ({
+  addBytesMock: vi.fn(),
+  mfsCpMock: vi.fn(),
+  mfsMkdirPMock: vi.fn(),
+  captureAndStoreMock: vi.fn(),
+  insertDocumentMock: vi.fn(),
+  insertTagsMock: vi.fn(),
+  insertAttachmentMock: vi.fn(),
+  getDocumentMock: vi.fn(),
+  assertPublicHostnameMock: vi.fn(),
+}))
 
 vi.mock("./ipfs.server", () => ({
   addBytesToIpfs: addBytesMock,
@@ -29,7 +39,17 @@ vi.mock("./documents-db.server", () => ({
   getDocument: getDocumentMock,
 }))
 
+// The real assertPublicHostname does a DNS lookup, which unit tests here
+// shouldn't depend on — the classification logic itself is covered by
+// network-guard.server.test.ts. We keep the real UnsafeUrlError class so
+// createDocument's `instanceof` check still works.
+vi.mock("./network-guard.server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./network-guard.server")>()
+  return { ...actual, assertPublicHostname: assertPublicHostnameMock }
+})
+
 import { createDocument, CreateDocumentError, MAX_FILE_SIZE_BYTES } from "./create-document.server"
+import { UnsafeUrlError } from "./network-guard.server"
 
 function makeFile(name: string, content: string, type = "text/plain"): File {
   return new File([content], name, { type })
@@ -40,6 +60,7 @@ describe("createDocument", () => {
     vi.clearAllMocks()
     mfsMkdirPMock.mockResolvedValue(undefined)
     mfsCpMock.mockResolvedValue(undefined)
+    assertPublicHostnameMock.mockResolvedValue(undefined)
     addBytesMock.mockImplementation(async (_bytes: Uint8Array, name: string) => ({
       cid: name.endsWith(".metadata") ? "bafymetadata" : "bafyfile",
       size: 11,
@@ -108,6 +129,22 @@ describe("createDocument", () => {
         file: makeFile("a.txt", "x"),
       }),
     ).rejects.toThrow("http or https")
+  })
+
+  it("rejects a source URL that resolves to a private/internal address", async () => {
+    assertPublicHostnameMock.mockRejectedValue(new UnsafeUrlError("nope"))
+
+    await expect(
+      createDocument({
+        userId: "user_1",
+        title: "Electric bill",
+        description: "",
+        sourceUrl: "https://internal.example.com/receipt",
+        file: null,
+      }),
+    ).rejects.toMatchObject({ message: expect.stringContaining("private or internal") })
+
+    expect(insertDocumentMock).not.toHaveBeenCalled()
   })
 
   it("uploads the file to IPFS/MFS and inserts a file attachment with extracted tags", async () => {
