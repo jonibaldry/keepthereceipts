@@ -67,17 +67,25 @@ function RegisterPage() {
             </p>
           </div>
 
+          <p
+            className={`${fadeClass} font-mono text-[0.78rem] text-ink-soft mt-3 mb-0 [&_a]:text-stamp [&_a]:underline [&_a]:underline-offset-2`}
+            style={fadeIn(3)}
+          >
+            By creating an account, you agree to the <a href="/terms">terms of use</a> and{" "}
+            <a href="/privacy">privacy policy</a>.
+          </p>
+
           {error && (
             <p
               role="alert"
               className={`${fadeClass} font-mono text-[0.82rem] text-stamp border-l-2 border-stamp pl-2 mt-4`}
-              style={fadeIn(3)}
+              style={fadeIn(4)}
             >
               {error}
             </p>
           )}
 
-          <form onSubmit={handleSubmit} className={`${fadeClass} mt-5 flex flex-col gap-4`} style={fadeIn(4)}>
+          <form onSubmit={handleSubmit} className={`${fadeClass} mt-5 flex flex-col gap-4`} style={fadeIn(5)}>
             <label className="flex flex-col gap-1.5">
               <span className="font-mono text-[0.72rem] tracking-[0.08em] uppercase text-ink-soft">username</span>
               <input
