@@ -57,7 +57,23 @@ function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section title="A folder per document" index={5}>
+        <Section title="A peer-to-peer network" index={5}>
+          <p className="m-0">
+            IPFS nodes don&rsquo;t go through a central server to talk to each other &mdash; they connect directly,
+            peer to peer, and use a distributed hash table to find out who currently holds a given CID. Content is
+            broken into blocks, and a node fetching a document asks its peers for whichever blocks it&rsquo;s
+            missing, from whichever peers happen to have them.
+          </p>
+          <p className="m-0">
+            Content addressing is what makes that efficient: a block&rsquo;s hash is its identity, so a node that
+            already has a block never needs to re-fetch it, no matter where it came from. When the vault changes,
+            that means only the actually-new blocks &mdash; a new document&rsquo;s files, an updated{" "}
+            <code>metadata.json</code> &mdash; need to propagate. Everything unchanged is already sitting on every
+            peer that had it before, and mirrors converge on the same state without anyone coordinating it.
+          </p>
+        </Section>
+
+        <Section title="A folder per document" index={6}>
           <p className="m-0">
             Each document lives at <code>/document/&lt;id&gt;/</code> in the vault&rsquo;s IPFS filesystem (MFS
             &mdash; IPFS&rsquo;s Mutable File System, a familiar directory tree built on top of content-addressed
@@ -67,7 +83,7 @@ function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section title="The vault database" index={6}>
+        <Section title="The vault database" index={7}>
           <p className="m-0">
             Everything is indexed in a single SQLite database, <code>vault.db</code>. A background process takes a
             consistent snapshot of it roughly every minute, adds that snapshot to IPFS, and publishes it into the
@@ -76,7 +92,7 @@ function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section title="Finding the current version" index={7}>
+        <Section title="Finding the current version" index={8}>
           <p className="m-0">
             Content addresses change every time the vault changes, so there needs to be one stable place to look up
             &ldquo;what&rsquo;s current.&rdquo; We publish the vault&rsquo;s root hash as a DNS TXT record
@@ -85,7 +101,7 @@ function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section title="Anyone can run a copy" index={8}>
+        <Section title="Anyone can run a copy" index={9}>
           <p className="m-0">
             The whole stack &mdash; IPFS node, database, and web frontend &mdash; is open source and packaged with
             Docker Compose, deliberately so it&rsquo;s easy to mirror. Because everything is content-addressed, a
@@ -94,7 +110,7 @@ function HowItWorksPage() {
           </p>
         </Section>
 
-        <Section title="What this buys you" index={9}>
+        <Section title="What this buys you" index={10}>
           <p className="m-0">
             A document you keep here isn&rsquo;t just uploaded &mdash; it&rsquo;s fingerprinted. Anyone holding a
             copy, on any node, can prove it&rsquo;s unaltered without needing to trust this site, this server, or
