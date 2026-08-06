@@ -100,10 +100,24 @@ export function PageShell({ currentUser, children }: PageShellProps) {
       >
         self-hosted &middot; open source &middot; no account required &middot;{" "}
         <a
+          href="/how-it-works"
+          className="underline underline-offset-2 hover:text-stamp focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
+        >
+          how it works
+        </a>{" "}
+        &middot;{" "}
+        <a
           href="/privacy"
           className="underline underline-offset-2 hover:text-stamp focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
         >
           privacy
+        </a>{" "}
+        &middot;{" "}
+        <a
+          href="/terms"
+          className="underline underline-offset-2 hover:text-stamp focus-visible:outline-2 focus-visible:outline-stamp focus-visible:outline-offset-2"
+        >
+          terms
         </a>
       </p>
 
