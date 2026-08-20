@@ -7,6 +7,8 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
+FROM ipfs/kubo:latest AS ipfs-cli
+
 FROM node:24.19.0-alpine
 WORKDIR /app
 # System Chromium for document capture (screenshot + MHTML archive) — we
@@ -15,9 +17,16 @@ WORKDIR /app
 RUN apk add --no-cache chromium
 COPY --from=build /app/.output ./.output
 
+# Used by replicate.sh when SLAVE_MODE is set (mirror deployments only) to
+# resolve and pin another vault's DNSLink root onto this node.
+COPY --from=ipfs-cli /usr/local/bin/ipfs /usr/local/bin/ipfs
+COPY replicate.sh docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/replicate.sh /usr/local/bin/docker-entrypoint.sh
+
 ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV CHROMIUM_PATH=/usr/bin/chromium-browser
 EXPOSE 3000
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", ".output/server/index.mjs"]

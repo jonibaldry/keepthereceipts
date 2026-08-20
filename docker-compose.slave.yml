@@ -1,0 +1,43 @@
+services:
+  ipfs-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.ipfs
+    container_name: slave-ipfs-node
+    ports:
+      - "4001:4001"             # swarm (TCP)
+      - "4001:4001/udp"         # swarm (UDP / QUIC)
+      - "127.0.0.1:5001:5001"   # HTTP API (localhost only, never public)
+      - "127.0.0.1:8080:8080"   # HTTP gateway
+    volumes:
+      - ./data/slave/ipfs:/data/ipfs
+      - ./data/slave/export:/export
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: slave-frontend
+    environment:
+      # Both the "run this image as a mirror" flag and the upstream
+      # DNSLink domain to replicate from — see replicate.sh. Unset this to
+      # run the same image as a normal (non-mirror) frontend instead.
+      SLAVE_MODE: keepthereceipts.net
+      IPFS_API: /dns4/ipfs-node/tcp/5001
+      IPFS_API_URL: http://ipfs-node:5001
+      # Points at this stack's own gateway: once replicate.sh has pinned
+      # the mirrored content, this node can serve it directly.
+      IPFS_GATEWAY_URL: http://localhost:8080
+      DNSLINK_DOMAIN: keepthereceipts.net
+      BASE_URL: http://localhost:3000
+      DB_PATH: /data/db/vault.db
+      PORT: "3000"
+      REPLICATE_INTERVAL: "60"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data/slave/db:/data/db   # replicate.sh writes the mirrored vault.db here
+    depends_on:
+      - ipfs-node
+    restart: unless-stopped

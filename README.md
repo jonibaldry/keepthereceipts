@@ -44,3 +44,20 @@ We're using the following packages:
 * react-dom
 * vitest
 * playwright
+
+# Running a mirror
+
+Because everything is content-addressed and published via DNSLink, anyone can run a read-along copy of the vault — a "slave" — without needing anything from us beyond the DNSLink domain. A mirror runs its own IPFS node and its own copy of the frontend image; it doesn't touch the canonical `vault.db` or accounts database, it just replicates.
+
+```
+docker compose -f docker-compose.slave.yml up --build
+```
+
+This starts two containers:
+
+* **`ipfs-node`** — a local kubo node, same image as the main stack's.
+* **`frontend`** — the same frontend image as the main stack, but with `SLAVE_MODE` set to the upstream DNSLink domain (`keepthereceipts.net` by default, edit `docker-compose.slave.yml` to mirror somewhere else).
+
+`SLAVE_MODE` doubles as the on/off switch and the target: when it's set, the container's entrypoint (`docker-entrypoint.sh`) launches `replicate.sh` in the background alongside the usual server. That script polls the upstream DNSLink root, `ipfs pin add -r`s it onto the local node — so the mirror becomes another provider on the network, not just a one-off download — and copies the mirrored `vault.db` down to `DB_PATH` so the local frontend's own UI browses the replicated index. It re-checks every `REPLICATE_INTERVAL` seconds (default 60) and skips the cycle whenever the resolved root hasn't changed.
+
+Once it's synced, the mirror is browsable at `http://localhost:3000` and its gateway at `http://localhost:8080`. Login/upload routes are still present in the image but aren't meaningful on a mirror — it has no accounts database of its own and isn't the canonical vault, so treat it as read-only.
