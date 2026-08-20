@@ -75,7 +75,7 @@ function HowItWorksPage() {
 
         <Section title="A folder per document" index={6}>
           <p className="m-0">
-            Each document lives at <code>/document/&lt;id&gt;/</code> in the vault&rsquo;s IPFS filesystem (MFS
+            Each document lives at <code>/vault/document/&lt;id&gt;/</code> in the vault&rsquo;s IPFS filesystem (MFS
             &mdash; IPFS&rsquo;s Mutable File System, a familiar directory tree built on top of content-addressed
             blocks). Inside, you&rsquo;ll find whatever was captured for that document: the uploaded file, a
             screenshot and offline archive if it came from a source URL, and always a <code>metadata.json</code>{" "}

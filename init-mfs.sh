@@ -9,5 +9,5 @@ ipfs files mkdir -p /vault
 ipfs files stat /vault
 
 echo "Setting up document root directory..."
-ipfs files mkdir -p /document
-ipfs files stat /document
+ipfs files mkdir -p /vault/document
+ipfs files stat /vault/document

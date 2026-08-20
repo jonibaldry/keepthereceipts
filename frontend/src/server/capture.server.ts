@@ -79,7 +79,7 @@ export async function captureAndStore(
     return
   }
 
-  const mfsDir = `/document/${documentId}`
+  const mfsDir = `/vault/document/${documentId}`
   await mfsMkdirP(mfsDir)
 
   try {

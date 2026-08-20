@@ -160,8 +160,8 @@ describe("createDocument", () => {
     })
 
     expect(addBytesMock).toHaveBeenCalledWith(expect.any(Uint8Array), "bill.pdf")
-    expect(mfsMkdirPMock).toHaveBeenCalledWith(expect.stringMatching(/^\/document\/doc_/))
-    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_.*\/bill\.pdf$/))
+    expect(mfsMkdirPMock).toHaveBeenCalledWith(expect.stringMatching(/^\/vault\/document\/doc_/))
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/vault\/document\/doc_.*\/bill\.pdf$/))
 
     const fileAttachment = insertAttachmentMock.mock.calls.find((call) => call[0].kind === "file")?.[0]
     expect(fileAttachment).toMatchObject({
@@ -190,7 +190,7 @@ describe("createDocument", () => {
     })
 
     expect(addBytesMock).toHaveBeenCalledWith(expect.any(Uint8Array), "vault.db")
-    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_[^/]+\/vault\.db$/))
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/vault\/document\/doc_[^/]+\/vault\.db$/))
 
     const fileAttachment = insertAttachmentMock.mock.calls.find((call) => call[0].kind === "file")?.[0]
     expect(fileAttachment).toMatchObject({ fileName: "vault.db" })
@@ -205,7 +205,7 @@ describe("createDocument", () => {
       file: makeFile("..\\..\\windows\\evil.exe", "x", "application/octet-stream"),
     })
 
-    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_[^/]+\/evil\.exe$/))
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/vault\/document\/doc_[^/]+\/evil\.exe$/))
   })
 
   it("falls back to a safe default filename when sanitizing leaves nothing usable", async () => {
@@ -217,7 +217,7 @@ describe("createDocument", () => {
       file: makeFile("../..", "x", "application/octet-stream"),
     })
 
-    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/document\/doc_[^/]+\/file$/))
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyfile", expect.stringMatching(/^\/vault\/document\/doc_[^/]+\/file$/))
   })
 
   it("writes a metadata.json file after the DB rows are created and records it as an attachment", async () => {
@@ -230,7 +230,7 @@ describe("createDocument", () => {
     })
 
     const documentId = insertDocumentMock.mock.calls[0][0].id
-    expect(mfsCpMock).toHaveBeenCalledWith("bafymetadata", `/document/${documentId}/metadata.json`)
+    expect(mfsCpMock).toHaveBeenCalledWith("bafymetadata", `/vault/document/${documentId}/metadata.json`)
     // getDocument (the full record) must be fetched before the metadata
     // write, so the export reflects tags/attachments, not just the insert.
     expect(getDocumentMock).toHaveBeenCalledWith(documentId)

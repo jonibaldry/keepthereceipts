@@ -50,7 +50,7 @@ describe("deleteDocument", () => {
     await deleteDocument("doc_1")
 
     expect(callOrder).toEqual(["db", "mfs"])
-    expect(mfsRmMock).toHaveBeenCalledWith("/document/doc_1")
+    expect(mfsRmMock).toHaveBeenCalledWith("/vault/document/doc_1")
   })
 
   it("unpins every attachment that has a cid", async () => {

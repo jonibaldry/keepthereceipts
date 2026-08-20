@@ -29,7 +29,7 @@ export async function deleteDocument(documentId: string): Promise<void> {
   markDocumentDeleted(documentId)
 
   try {
-    await mfsRm(`/document/${documentId}`)
+    await mfsRm(`/vault/document/${documentId}`)
   } catch (err) {
     console.error(`failed to remove MFS directory for document ${documentId}:`, err)
   }

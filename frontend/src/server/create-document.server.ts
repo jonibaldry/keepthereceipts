@@ -68,8 +68,8 @@ async function uploadFileAttachment(documentId: string, file: File): Promise<New
   const bytes = new Uint8Array(await file.arrayBuffer())
   try {
     const { cid } = await addBytesToIpfs(bytes, fileName)
-    await mfsMkdirP(`/document/${documentId}`)
-    await mfsCp(cid, `/document/${documentId}/${fileName}`)
+    await mfsMkdirP(`/vault/document/${documentId}`)
+    await mfsCp(cid, `/vault/document/${documentId}/${fileName}`)
     return {
       id: generateAttachmentId(),
       documentId,
@@ -110,8 +110,8 @@ async function writeMetadataFile(documentId: string, document: DocumentRecord): 
   try {
     const bytes = new TextEncoder().encode(JSON.stringify(withIpfsLinks(document), null, 2))
     const { cid } = await addBytesToIpfs(bytes, fileName)
-    await mfsMkdirP(`/document/${documentId}`)
-    await mfsCp(cid, `/document/${documentId}/${fileName}`)
+    await mfsMkdirP(`/vault/document/${documentId}`)
+    await mfsCp(cid, `/vault/document/${documentId}/${fileName}`)
     return {
       id: generateAttachmentId(),
       documentId,

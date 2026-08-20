@@ -64,9 +64,9 @@ describe("captureAndStore", () => {
 
     await captureAndStore("doc_1", "https://example.com/receipt", "att_shot", "att_arch")
 
-    expect(mfsMkdirPMock).toHaveBeenCalledWith("/document/doc_1")
-    expect(mfsCpMock).toHaveBeenCalledWith("bafyshot", "/document/doc_1/screenshot.png")
-    expect(mfsCpMock).toHaveBeenCalledWith("bafyarchive", "/document/doc_1/archive.mhtml")
+    expect(mfsMkdirPMock).toHaveBeenCalledWith("/vault/document/doc_1")
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyshot", "/vault/document/doc_1/screenshot.png")
+    expect(mfsCpMock).toHaveBeenCalledWith("bafyarchive", "/vault/document/doc_1/archive.mhtml")
     expect(updateAttachmentMock).toHaveBeenCalledWith("att_shot", { cid: "bafyshot", fileSize: 9, status: "complete" })
     expect(updateAttachmentMock).toHaveBeenCalledWith("att_arch", {
       cid: "bafyarchive",
