@@ -18,7 +18,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "A open source, shared, freely distributable document vault. Every file is stored with IPFS, so every document gets a cryptographic fingerprint. Copy or continuously replicate the vault to any machine — the fingerprint proves nothing changed.",
+          "A open source, shared, freely distributable document vault. Every file is stored with IPFS, a distributed storage network, so every document is publicly accessible. Copy or continuously replicate the vault to any machine — the fingerprint proves nothing changed.",
       },
       { property: "og:url", content: `${match.context.baseUrl}${match.pathname}` },
     ],
@@ -39,7 +39,7 @@ function Home() {
           A open source, shared, freely distributable document vault
         </h1>
         <p className="m-0 max-w-[46ch] text-ink-soft text-[1.02rem] leading-[1.55]">
-          keepthereceipts.net stores your files with IPFS, so every document gets a cryptographic fingerprint. Copy
+          keepthereceipts.net stores your files with IPFS, a distributed storage network, so every document is publicly accessible. Copy
           or continuously replicate the vault to any machine &mdash; the fingerprint proves nothing changed.
         </p>
       </div>
